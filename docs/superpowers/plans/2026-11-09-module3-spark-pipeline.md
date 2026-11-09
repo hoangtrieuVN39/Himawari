@@ -51,11 +51,11 @@
   - `spark` pytest session fixture in `tests/spark/conftest.py`
   - Docker Compose service `spark-processor` capable of running `pytest tests/spark/ -v` and `python -m src.spark.run_pipeline`
 
-- [ ] **Step 1: Update `Dockerfile`, `requirements.txt`, and `docker-compose.yml` with OpenJDK 17 and PySpark**
+- [x] **Step 1: Update `Dockerfile`, `requirements.txt`, and `docker-compose.yml` with OpenJDK 17 and PySpark**
 
 Add `openjdk-17-jre-headless` (and `procps`) via `apt-get` in `Dockerfile`, set `JAVA_HOME`, add `pyspark>=3.5.0`, `pyarrow>=15.0.0`, `pandas>=2.2.0` to `requirements.txt`, and add service `spark-processor` in `docker-compose.yml` mounting `./data:/app/data`, `./config:/app/config`, `./src:/app/src`, and `./tests:/app/tests`.
 
-- [ ] **Step 2: Write the failing test in `tests/spark/test_session.py`**
+- [x] **Step 2: Write the failing test in `tests/spark/test_session.py`**
 
 ```python
 from src.spark.session import get_spark_session
@@ -68,16 +68,16 @@ def test_spark_session_utc_and_basic_dataframe():
     assert df.count() == 2
 ```
 
-- [ ] **Step 3: Implement `get_spark_session` in `src/spark/session.py` and fixture in `tests/spark/conftest.py`**
+- [x] **Step 3: Implement `get_spark_session` in `src/spark/session.py` and fixture in `tests/spark/conftest.py`**
 
 Configure `spark.sql.session.timeZone = "UTC"`, `spark.sql.execution.arrow.pyspark.enabled = "true"`, `spark.ui.enabled = "false"`, and `spark.sql.shuffle.partitions = "4"` for fast local/Docker execution.
 
-- [ ] **Step 4: Build `spark-processor` image and run test inside Docker**
+- [x] **Step 4: Build `spark-processor` image and run test inside Docker**
 
 Run: `docker compose build spark-processor && docker compose run --rm spark-processor pytest tests/spark/test_session.py -v`
 Expected: PASS (`1 passed`)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Dockerfile requirements.txt docker-compose.yml src/spark/__init__.py src/spark/session.py tests/spark/__init__.py tests/spark/conftest.py tests/spark/test_session.py
@@ -101,25 +101,25 @@ git commit -m "feat(spark): add Docker OpenJDK/PySpark runtime and UTC SparkSess
   - `read_raw_open_meteo(spark: SparkSession, path: str) -> DataFrame`
   - `read_raw_himawari_metrics(spark: SparkSession, path: str) -> DataFrame`
 
-- [ ] **Step 1: Write failing tests in `tests/spark/test_schemas_and_readers.py`**
+- [x] **Step 1: Write failing tests in `tests/spark/test_schemas_and_readers.py`**
 
 Test reading valid sample envelopes for all 3 sources as well as malformed JSON files (capturing `_corrupt_record` without failing the job) and attaching `batch_id`, `fetched_at_utc`, `is_backfill`, `is_synthetic_test`, and `input_file_path`.
 
-- [ ] **Step 2: Run test in Docker to verify it fails**
+- [x] **Step 2: Run test in Docker to verify it fails**
 
 Run: `docker compose run --rm spark-processor pytest tests/spark/test_schemas_and_readers.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'src.spark.schemas'`
 
-- [ ] **Step 3: Implement `src/spark/schemas.py` and `src/spark/readers.py`**
+- [x] **Step 3: Implement `src/spark/schemas.py` and `src/spark/readers.py`**
 
 Use `spark.read.schema(...).option("multiLine", True).option("mode", "PERMISSIVE").option("columnNameOfCorruptRecord", "_corrupt_record").json(path)`. Explode `payload` for METAR, `arrays_zip` + `explode` for Open-Meteo `hourly` arrays, and `explode` `airports` for Himawari B13 metrics.
 
-- [ ] **Step 4: Run test in Docker to verify it passes**
+- [x] **Step 4: Run test in Docker to verify it passes**
 
 Run: `docker compose run --rm spark-processor pytest tests/spark/test_schemas_and_readers.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/spark/schemas.py src/spark/readers.py tests/spark/test_schemas_and_readers.py
@@ -144,28 +144,28 @@ git commit -m "feat(spark): add strict schemas and raw JSON envelope readers for
   - `build_data_quality_profile(valid_metar_df: DataFrame, valid_forecast_df: DataFrame, valid_himawari_df: DataFrame, quarantine_df: DataFrame) -> dict`
   - `inject_synthetic_quarantine_batch(raw_root: str) -> dict`
 
-- [ ] **Step 1: Write failing tests in `tests/spark/test_quarantine_and_reconcile.py`**
+- [x] **Step 1: Write failing tests in `tests/spark/test_quarantine_and_reconcile.py`**
 
 Include tests for:
 1. Quarantine error codes: `SCHEMA_VIOLATION`, `UNKNOWN_AIRPORT` (`"VVXX"`), `INVALID_TIMESTAMP`, `FUTURE_OBSERVATION_TIME`, `OUT_OF_RANGE_BT_KELVIN` ($120.0\text{ K}$ and $410.0\text{ K}$), `OUT_OF_RANGE_CLOUD_FRACTION` ($1.25$), and `NEGATIVE_FORECAST_VALUE` ($-2.0\text{ mm}$).
 2. Deduplication vs. METAR revision preservation: identical `(airport_icao, observed_at_utc, raw_ob)` drops duplicates and increments `rows_duplicate_dropped`, whereas a corrected report (`COR` / `SPECI`) with the same `(airport_icao, observed_at_utc)` but different `raw_ob` is retained with `revision_index = 2`.
 3. Invariant reconciliation equations: `rows_read == rows_valid_pre_dedup + rows_quarantined` and `rows_valid_pre_dedup == rows_retained_valid + rows_duplicate_dropped`.
 
-- [ ] **Step 2: Run test in Docker to verify it fails**
+- [x] **Step 2: Run test in Docker to verify it fails**
 
 Run: `docker compose run --rm spark-processor pytest tests/spark/test_quarantine_and_reconcile.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement `src/spark/quarantine.py`**
+- [x] **Step 3: Implement `src/spark/quarantine.py`**
 
 Implement array-based `error_codes` evaluation using PySpark SQL functions (`array_remove`, `when`, `lit`), split into `valid_pre_dedup_df` (`size(error_codes) == 0`) and `quarantine_df` (`size(error_codes) > 0`), apply Window deduplication & revision numbering, and compute reconciliation & data quality profile dictionaries.
 
-- [ ] **Step 4: Run test in Docker to verify it passes**
+- [x] **Step 4: Run test in Docker to verify it passes**
 
 Run: `docker compose run --rm spark-processor pytest tests/spark/test_quarantine_and_reconcile.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/spark/quarantine.py tests/spark/test_quarantine_and_reconcile.py
@@ -187,7 +187,7 @@ git commit -m "feat(spark): add quarantine validation, revision deduplication an
   - `enrich_valid_metar(df: DataFrame) -> DataFrame` (adds `visibility_m`, `visibility_capped_9999`, `is_low_visibility`, `has_precip_or_thunder_at_station`, `station_weather_codes`, `has_vicinity_weather`, `vicinity_weather_codes`, `trend_weather_codes`, `is_amended_or_speci`)
   - `enrich_valid_himawari(df: DataFrame) -> DataFrame` (adds `b13_cloud_tag`, `b13_summary_vi`)
 
-- [ ] **Step 1: Write failing tests in `tests/spark/test_transforms.py`**
+- [x] **Step 1: Write failing tests in `tests/spark/test_transforms.py`**
 
 Test exact cases:
 1. `"METAR VVDN 090700Z 08007KT 9999 -RA SCT020 BKN070 27/24 Q1016 NOSIG"` -> `visibility_m == 10000`, `visibility_capped_9999 is True`, `is_low_visibility is False`, `has_precip_or_thunder_at_station is True`, `station_weather_codes == ["-RA"]`.
@@ -196,21 +196,21 @@ Test exact cases:
 4. `"SPECI VVDN 091505Z COR 11015G25KT 4000 +TSRA BKN015CB 25/24 Q1012"` -> `is_amended_or_speci is True`, `visibility_m == 4000`, `is_low_visibility is True`, `has_precip_or_thunder_at_station is True`, `station_weather_codes == ["+TSRA"]`.
 5. Himawari B13 classification: `inner_severe_convection_fraction = 0.12` -> `"SEVERE_CONVECTION_AT_STATION"`; `inner_cold_cloud_fraction = 0.08` -> `"COLD_CONVECTIVE_CLOUD_AT_STATION"`.
 
-- [ ] **Step 2: Run test in Docker to verify it fails**
+- [x] **Step 2: Run test in Docker to verify it fails**
 
 Run: `docker compose run --rm spark-processor pytest tests/spark/test_transforms.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement `src/spark/transforms.py`**
+- [x] **Step 3: Implement `src/spark/transforms.py`**
 
 Implement deterministic regex parser splitting `raw_ob` at `\b(TEMPO|BECMG|NOSIG|RMK)\b`, extracting metric 4-digit visibility / `CAVOK` / statute-mile fallback, separating station precipitation/thunderstorm tokens from `VC*` vicinity and `TEMPO`/`BECMG` trend tokens, and wrapping in a typed PySpark UDF / native expressions.
 
-- [ ] **Step 4: Run test in Docker to verify it passes**
+- [x] **Step 4: Run test in Docker to verify it passes**
 
 Run: `docker compose run --rm spark-processor pytest tests/spark/test_transforms.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/spark/transforms.py tests/spark/test_transforms.py
@@ -233,7 +233,7 @@ git commit -m "feat(spark): add METAR visibility/phenomenon normalizer and B13 c
   - `build_point_in_time_snapshot(spark: SparkSession, review_slots_utc: list[str], metar_df: DataFrame, forecast_df: DataFrame, himawari_df: DataFrame, airports: list[str], mode: str = "live") -> DataFrame` in `src/spark/temporal_join.py`
   - `apply_priority_rules(snapshot_df: DataFrame) -> DataFrame` in `src/spark/priority_engine.py`
 
-- [ ] **Step 1: Write failing tests in `tests/spark/test_temporal_join.py` and `tests/spark/test_priority_engine.py`**
+- [x] **Step 1: Write failing tests in `tests/spark/test_temporal_join.py` and `tests/spark/test_priority_engine.py`**
 
 Cover:
 1. **No Future Leakage:** Forecast fetched at `15:15Z` is excluded when `review_slot_utc = "2026-11-09T15:00:00Z"`, and included when `review_slot_utc = "2026-11-09T15:20:00Z"`.
@@ -242,21 +242,21 @@ Cover:
 4. **Locked Scenario 1 (Single Top Answer at 15:00Z):** `VVDN` has fresh METAR with `TSRA` (Level 1); `VVNB` has 90-minute old METAR (Level 2); `VVTS` has fresh fair METAR + next-hour forecast rain $1.8\text{ mm}$ (Level 3) -> `accepted_first_review_airports == ["VVDN"]`, `is_co_priority_top == False`.
 5. **Locked Scenario 2 (Co-Priority Top Tie & Order Invariance):** `VVDN` has fresh METAR with `TS` and visibility $6000\text{ m}$ (Level 1); `VVNB` has fresh METAR with `RA` and visibility $2000\text{ m}$ (Level 1); `VVTS` has normal conditions (Level 4) -> Both `VVDN` and `VVNB` have `priority_level == 1`, `is_top_priority == True`, `is_co_priority_top == True`, `accepted_first_review_airports == ["VVDN", "VVNB"]`. Reversing the input DataFrame row order yields identical priority fields and `accepted_first_review_airports`.
 
-- [ ] **Step 2: Run tests in Docker to verify they fail**
+- [x] **Step 2: Run tests in Docker to verify they fail**
 
 Run: `docker compose run --rm spark-processor pytest tests/spark/test_temporal_join.py tests/spark/test_priority_engine.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement `src/spark/temporal_join.py` and `src/spark/priority_engine.py`**
+- [x] **Step 3: Implement `src/spark/temporal_join.py` and `src/spark/priority_engine.py`**
 
 Implement the 3-airport spine cross-join with `review_slots_utc`, point-in-time window filtering (`fetched_at_utc <= review_slot_utc` in `live` mode, backfill-aware in `replay` mode), 6-image sequence aggregation, Level 1–4 `when` expression chain, Vietnamese evidence summary generation, and Window-based `is_top_priority` / `is_co_priority_top` / `accepted_first_review_airports` calculation.
 
-- [ ] **Step 4: Run tests in Docker to verify they pass**
+- [x] **Step 4: Run tests in Docker to verify they pass**
 
 Run: `docker compose run --rm spark-processor pytest tests/spark/test_temporal_join.py tests/spark/test_priority_engine.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/spark/temporal_join.py src/spark/priority_engine.py tests/spark/test_temporal_join.py tests/spark/test_priority_engine.py
@@ -278,31 +278,32 @@ git commit -m "feat(spark): add point-in-time temporal join and Level 1-4 priori
   - CLI `python -m src.spark.run_pipeline` supporting `--storage-root` (`data` or `hdfs://namenode:9000/data`), `--review-slots` (comma-separated ISO UTC timestamps or `latest`), `--mode` (`live` or `replay`), and `--inject-quarantine-test`
   - Output datasets under `data/processed/`: `valid_metar/`, `valid_open_meteo/`, `valid_himawari_metrics/`, `quarantine/`, `data_profile/`, `reconciliation/`, `decision_table/`
 
-- [ ] **Step 1: Write failing integration & idempotency tests in `tests/spark/test_run_pipeline.py`**
+- [x] **Step 1: Write failing integration & idempotency tests in `tests/spark/test_run_pipeline.py`**
 
 Verify that:
 1. Running `run_spark_pipeline` twice on the same input produces identical key counts (`3 * len(review_slots)`), identical priority decisions, and identical quarantine row counts.
 2. Missing one source completely for an airport still outputs all 3 airport rows for every review slot with explicit missing-source flags.
 
-- [ ] **Step 2: Run test in Docker to verify it fails**
+- [x] **Step 2: Run test in Docker to verify it fails**
 
 Run: `docker compose run --rm spark-processor pytest tests/spark/test_run_pipeline.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement `src/spark/run_pipeline.py` and update `README.md`**
+- [x] **Step 3: Implement `src/spark/run_pipeline.py` and update `README.md`**
 
 Implement the full pipeline orchestrator writing deterministic Parquet + JSONL outputs, run against our real collected dataset for replay slots `2026-11-09T07:00:00Z` (single-airport rain at `VVDN`) and `2026-11-09T08:00:00Z` (co-priority rain at `VVDN` + `VVNB`) plus `--inject-quarantine-test`, and document Docker usage in `README.md`.
 
-- [ ] **Step 4: Run full test suite (Module 1 + Module 2 + Module 3) and execute real pipeline in Docker**
+- [x] **Step 4: Run full test suite (Module 1 + Module 2 + Module 3) and execute real pipeline in Docker**
 
 Run:
 `docker compose run --rm spark-processor pytest tests/ -v`
 `docker compose run --rm spark-processor python -m src.spark.run_pipeline --mode replay --review-slots 2026-11-09T07:00:00Z,2026-11-09T08:00:00Z --inject-quarantine-test`
 Expected: All tests PASS and `data/processed/decision_table/`, `data/processed/quarantine/`, and `data/processed/reconciliation/` are generated and verified.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/spark/run_pipeline.py tests/spark/test_run_pipeline.py README.md data/processed/
 git commit -m "feat(spark): add end-to-end PySpark pipeline CLI, reconciliation outputs and replay verification"
 ```
+

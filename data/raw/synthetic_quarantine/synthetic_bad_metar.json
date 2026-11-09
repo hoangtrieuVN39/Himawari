@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "batch_id": "synthetic_metar_bad_batch",
+    "source": "aviationweather_metar",
+    "source_url": "test://synthetic",
+    "attribution": "Synthetic test record",
+    "expected_slot_utc": "2026-11-09T15:00:00Z",
+    "fetched_at_utc": "2026-11-09T15:00:00Z",
+    "http_status": 200,
+    "airports_requested": [
+      "VVXX"
+    ],
+    "is_backfill": false,
+    "is_synthetic_test": true
+  },
+  "payload": [
+    {
+      "icaoId": "VVXX",
+      "receiptTime": "2026-11-09T15:02:00Z",
+      "obsTime": 1794236400,
+      "reportTime": "2026-11-09T15:00:00Z",
+      "rawOb": "METAR VVXX 091500Z 10010KT 9999 NOSIG",
+      "visib": "6+"
+    },
+    {
+      "icaoId": "VVDN",
+      "receiptTime": "2026-11-09T15:02:00Z",
+      "obsTime": 1794240000,
+      "reportTime": "2026-11-09T16:00:00Z",
+      "rawOb": "METAR VVDN 091600Z 10010KT 9999 NOSIG",
+      "visib": "6+"
+    },
+    {
+      "icaoId": "VVNB",
+      "receiptTime": "2026-11-09T15:02:00Z",
+      "obsTime": 1794236400,
+      "reportTime": "2026-11-09T15:00:00Z",
+      "rawOb": "NIL",
+      "visib": "6+"
+    }
+  ]
+}

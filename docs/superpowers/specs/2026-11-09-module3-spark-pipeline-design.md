@@ -223,3 +223,4 @@ Cho mỗi mốc rà soát `review_slot_utc`:
 4. **Kiểm thử Đầu ra & Tái lập (`test_run_pipeline.py`):**
    - Mỗi `review_slot_utc` luôn sinh đúng 3 dòng `(review_slot_utc, airport_icao)` kể cả khi 1 sân bay bị thiếu hoàn toàn dữ liệu.
    - Chạy pipeline 2 lần liên tiếp trên bộ mẫu thực tế (`07:00Z` và `08:00Z` ngày `2026-11-09`) cho ra cùng số khóa, cùng giá trị quyết định và cùng số bản ghi lỗi.
+

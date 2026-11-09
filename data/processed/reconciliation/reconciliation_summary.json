@@ -1,0 +1,38 @@
+{
+  "generated_at_utc": "2026-11-09T13:01:04.260026+00:00",
+  "all_sources_reconciled": true,
+  "sources": [
+    {
+      "source": "metar",
+      "rows_read": 297,
+      "rows_quarantined": 0,
+      "rows_valid_pre_dedup": 297,
+      "rows_retained_valid": 156,
+      "rows_duplicate_dropped": 141,
+      "is_reconciled": true
+    },
+    {
+      "source": "open_meteo",
+      "rows_read": 864,
+      "rows_quarantined": 0,
+      "rows_valid_pre_dedup": 864,
+      "rows_retained_valid": 864,
+      "rows_duplicate_dropped": 0,
+      "is_reconciled": true
+    },
+    {
+      "source": "himawari_metrics",
+      "rows_read": 30,
+      "rows_quarantined": 0,
+      "rows_valid_pre_dedup": 30,
+      "rows_retained_valid": 24,
+      "rows_duplicate_dropped": 6,
+      "is_reconciled": true
+    }
+  ],
+  "binary_file_errors": {
+    "total_count": 1,
+    "synthetic_count": 1,
+    "log_path": "data/logs/himawari_file_errors.jsonl"
+  }
+}

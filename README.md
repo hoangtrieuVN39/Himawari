@@ -7,9 +7,9 @@ Theo dõi và rà soát thời tiết 3 sân bay:
 
 ---
 
-## Kiến trúc Hệ thống Thu thập Dữ liệu (Ingestion Pipeline)
+## Kiến trúc Hệ thống (End-to-End Big Data Architecture)
 
-Hệ thống bao gồm hai tầng thu thập dữ liệu phối hợp:
+Hệ thống bao gồm ba tầng xử lý dữ liệu phối hợp:
 
 ### 1. Mô-đun 1: Quan trắc Mặt đất & Dự báo Thời tiết
 - **METAR (Aviation Weather Center):** Quan trắc thực tế tại sân bay mỗi 10 phút, bảo toàn bản tin gốc `rawOb`, tầm nhìn `visib`, hiện tượng thời tiết `wxString`.
@@ -22,6 +22,14 @@ Hệ thống bao gồm hai tầng thu thập dữ liệu phối hợp:
 - **Trực quan hóa Bản đồ Nhiệt:** Xuất ảnh PNG chú giải với tâm sân bay, viền hộp trong và chân trang nguồn bắt buộc (`JMA/NOAA Himawari-9 B13 via AWS Open Data`).
 - **Cách ly & Kiểm soát Tệp Hỏng:** Kiểm tra tính toàn vẹn phần đầu giải nén BZ2/HSD (tối thiểu 1500 bytes); cô lập và ghi nhận tệp hỏng vào `data/logs/himawari_file_errors.jsonl`.
 - **Đồng bộ Lưu trữ Hadoop HDFS (WebHDFS REST):** Tự động đẩy dữ liệu sang Hadoop HDFS (`/data/raw/`, `/data/processed/`), đo kiểm và ghi nhật ký thông lượng (MB/s) vào `data/logs/hdfs_sync_log.jsonl`.
+
+### 3. Mô-đun 3: Xử lý Dữ liệu Lớn với PySpark & Động cơ Phân cấp Ưu tiên
+- **Đọc Dữ liệu Thô theo Schema Chặt chẽ:** Đọc trực tiếp các tệp JSON METAR, Open-Meteo và Himawari Metrics từ thư mục cục bộ hoặc Hadoop HDFS.
+- **Cách ly Lỗi (Quarantine) & Đối soát Bảo toàn Dòng (Reconciliation):** Tách biệt các bản ghi lỗi cấu trúc, thiếu khóa bắt buộc hoặc vi phạm ngưỡng vật lý vào `data/processed/quarantine/`. Đảm bảo bất biến đối soát `rows_read == rows_valid_pre_dedup + rows_quarantined` và xuất báo cáo tại `data/processed/reconciliation/reconciliation_summary.json`.
+- **Chuẩn hóa Khí tượng & Phân loại Mây Vệ tinh:** Chuẩn hóa tầm nhìn (giới hạn 9999m), trích xuất mã thời tiết mưa/dông (`-RA`, `TSRA`, `SHRA`, v.v.), gắn nhãn tầng mây đối lưu B13 (`SEVERE_CONVECTIVE_CORE`, `COLD_OPAQUE_CORE`, v.v.).
+- **Ghép Dữ liệu theo Điểm Thời gian (Point-in-Time Join):** Tránh rò rỉ dữ liệu tương lai (zero future data leakage) bằng cách chỉ liên kết các bản ghi có thời điểm tạo/quan trắc trước hoặc đúng thời điểm rà soát (`review_slot_utc`).
+- **Động cơ Phân cấp Ưu tiên Đa yếu tố (Levels 1–4):** Xếp hạng độ nguy hiểm thời tiết theo 4 cấp bậc và xử lý đồng mức ưu tiên (`co-priority ties`) công bằng, kèm giải thích tiếng Việt tường minh.
+- **Bảng Quyết định (Decision Table):** Xuất bảng dữ liệu 3 dòng/lượt rà soát (mỗi sân bay 1 dòng) dạng JSONL/Parquet phục vụ Dashboard Streamlit ở Mô-đun 4.
 
 ---
 
@@ -70,7 +78,22 @@ Xem nhật ký phát hiện tại `data/logs/himawari_file_errors.jsonl`.
   docker compose logs -f ingestor
   ```
 
-### 7. Chạy Toàn bộ Bộ Kiểm thử Tự động (Unit Tests)
+### 7. Chạy Pipeline PySpark & Động cơ Phân cấp Ưu tiên (Mô-đun 3)
+Chạy pipeline phân tích dữ liệu, đối soát và sinh bảng quyết định:
+- **Chế độ Replay lịch sử (ví dụ các mốc 14:00 và 15:00 UTC):**
+  ```bash
+  .venv\Scripts\python.exe -m src.spark.run_pipeline --storage-root data --mode replay --review-slots "2026-11-09T07:00:00Z,2026-11-09T08:00:00Z"
+  ```
+- **Chế độ Live (lấy mốc mới nhất hiện có):**
+  ```bash
+  .venv\Scripts\python.exe -m src.spark.run_pipeline --storage-root data --mode live
+  ```
+- **Kiểm thử cách ly bản ghi hỏng (Synthetic Quarantine Test):**
+  ```bash
+  .venv\Scripts\python.exe -m src.spark.run_pipeline --inject-quarantine-test
+  ```
+
+### 8. Chạy Toàn bộ Bộ Kiểm thử Tự động (Unit & Integration Tests)
 ```bash
 .venv\Scripts\pytest.exe tests/ -v
 ```
@@ -81,33 +104,48 @@ Xem nhật ký phát hiện tại `data/logs/himawari_file_errors.jsonl`.
 ```text
 DLL/
 ├── config/
-│   └── airports.json                 # Tọa độ, mã ICAO và phân đoạn vệ tinh của 3 sân bay
+│   ├── airports.json                 # Tọa độ, mã ICAO và phân đoạn vệ tinh của 3 sân bay
+│   └── hadoop/bin/                   # winutils.exe & hadoop.dll cho PySpark trên Windows
 ├── src/
-│   └── ingestion/
-│       ├── config_loader.py          # Đọc và xác thực cấu hình sân bay
-│       ├── storage.py                # Ghi tệp nguyên tử (.tmp -> .json) & ghi log audit
-│       ├── http_client.py            # Gọi HTTP với cơ chế retry và exponential backoff
-│       ├── metar_client.py           # Thu thập bản tin METAR
-│       ├── open_meteo_client.py      # Thu thập dự báo Open-Meteo
-│       ├── himawari_client.py        # Tải phân đoạn Himawari-9 S3 & quản lý vòng đời tệp thô
-│       ├── satpy_processor.py        # Cắt tọa độ bằng Satpy, tính chỉ số đám mây, vẽ PNG
-│       ├── hdfs_client.py            # Khách WebHDFS đẩy dữ liệu & đo benchmark thông lượng
-│       └── run_ingest.py             # Điểm điều phối CLI chính (--once, --loop, --include-himawari, v.v.)
-├── tests/ingestion/                  # Toàn bộ bộ kiểm thử đơn vị bao phủ các luồng dữ liệu
+│   ├── ingestion/                    # Mô-đun 1 & 2: Thu thập và chuẩn bị dữ liệu
+│   │   ├── config_loader.py          # Đọc và xác thực cấu hình sân bay
+│   │   ├── storage.py                # Ghi tệp nguyên tử (.tmp -> .json) & ghi log audit
+│   │   ├── http_client.py            # Gọi HTTP với cơ chế retry và exponential backoff
+│   │   ├── metar_client.py           # Thu thập bản tin METAR
+│   │   ├── open_meteo_client.py      # Thu thập dự báo Open-Meteo
+│   │   ├── himawari_client.py        # Tải phân đoạn Himawari-9 S3 & quản lý vòng đời tệp thô
+│   │   ├── satpy_processor.py        # Cắt tọa độ bằng Satpy, tính chỉ số đám mây, vẽ PNG
+│   │   ├── hdfs_client.py            # Khách WebHDFS đẩy dữ liệu & đo benchmark thông lượng
+│   │   └── run_ingest.py             # Điểm điều phối CLI chính (--once, --loop, v.v.)
+│   └── spark/                        # Mô-đun 3: Xử lý Big Data & Động cơ Ưu tiên
+│       ├── session.py                # Khởi tạo SparkSession tối ưu cục bộ/HDFS
+│       ├── schemas.py                # Schema PySpark nghiêm ngặt cho 3 nguồn dữ liệu
+│       ├── readers.py                # Trình đọc JSON hỗ trợ _corrupt_record
+│       ├── quarantine.py             # Phân tách cách ly & báo cáo đối soát bảo toàn dòng
+│       ├── transforms.py             # Chuẩn hóa tầm nhìn, mã thời tiết, phân loại mây B13
+│       ├── temporal_join.py          # Ghép dữ liệu Point-in-Time không rò rỉ tương lai
+│       ├── priority_engine.py        # Động cơ phân cấp Level 1–4 & giải quyết đồng mức
+│       └── run_pipeline.py           # Điều phối CLI pipeline PySpark và xuất bảng quyết định
+├── tests/
+│   ├── ingestion/                    # Kiểm thử đơn vị cho tầng Ingestion (43 test cases)
+│   └── spark/                        # Kiểm thử đơn vị & tích hợp cho PySpark (18 test cases)
 ├── data/
-│   ├── raw/                          # Lớp dữ liệu thô (Raw Data Layer)
+│   ├── raw/                          # Lớp dữ liệu thô (Hive partition YYYY-MM-DD)
 │   │   ├── metar/date=YYYY-MM-DD/
 │   │   ├── open_meteo/date=YYYY-MM-DD/
 │   │   ├── himawari_hsd/date=YYYY-MM-DD/slot=HHMM/
 │   │   └── himawari_metrics/date=YYYY-MM-DD/
 │   ├── processed/
-│   │   └── himawari_png/airport=ICAO/date=YYYY-MM-DD/
+│   │   ├── himawari_png/airport=ICAO/date=YYYY-MM-DD/
+│   │   ├── decision_table/           # decision_table.jsonl (3 dòng/lượt rà soát)
+│   │   ├── quarantine/               # quarantine_records.jsonl
+│   │   └── reconciliation/           # reconciliation_summary.json (bảo toàn dòng)
 │   └── logs/                         # Nhật ký kiểm toán & chỉ số 5V
 │       ├── ingestion_log.jsonl       # Bảng đối soát số lượt quét, số bản ghi, byte thực tải
 │       ├── himawari_file_errors.jsonl# Nhật ký cô lập tệp nhị phân vệ tinh bị hỏng
 │       └── hdfs_sync_log.jsonl       # Nhật ký đo kiểm thông lượng WebHDFS (MB/s)
-├── docker-compose.yml                # Docker Compose bao gồm Ingestor, NameNode, DataNode
+├── docker-compose.yml                # Docker Compose bao gồm Ingestor, NameNode, DataNode, Spark
 ├── Dockerfile                        # Đóng gói container chạy ngầm
-├── requirements.txt                  # Thư viện phụ thuộc (Satpy, Requests, Pytest, Matplotlib, v.v.)
+├── requirements.txt                  # Thư viện phụ thuộc (PySpark, Satpy, Requests, v.v.)
 └── run_daemon.bat                    # Kịch bản khởi chạy 1 chạm có Himawari-9 trên Windows
 ```

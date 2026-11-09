@@ -1,0 +1,25 @@
+{
+  "metadata": {
+    "batch_id": "synthetic_himawari_bad_batch",
+    "source": "himawari_metrics",
+    "scan_slot_utc": "2026-11-09T15:00:00Z",
+    "processed_at_utc": "2026-11-09T15:05:00Z",
+    "is_backfill": false,
+    "is_synthetic_test": true,
+    "airport_count": 1
+  },
+  "airports": [
+    {
+      "airport_icao": "VVDN",
+      "segment_code": "S0410",
+      "scan_time_utc": "2026-11-09T15:00:00Z",
+      "fetched_at_utc": "2026-11-09T15:05:00Z",
+      "status": "AVAILABLE",
+      "outer_bt_min_k": 450.0,
+      "inner_bt_min_k": 100.0,
+      "b13_valid_fraction": 1.5,
+      "inner_cold_cloud_fraction": 0.0,
+      "inner_severe_convection_fraction": 0.0
+    }
+  ]
+}

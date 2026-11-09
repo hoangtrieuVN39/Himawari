@@ -26,6 +26,24 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
 
+  spark-processor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: airport_weather_spark_processor
+    profiles: ["spark"]
+    volumes:
+      - ./config:/app/config:ro
+      - ./src:/app/src
+      - ./tests:/app/tests:ro
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - SPARK_LOCAL_IP=127.0.0.1
+    depends_on:
+      - namenode
+
   namenode:
     image: apache/hadoop:3
     container_name: hadoop_namenode
