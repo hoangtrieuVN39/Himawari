@@ -25,3 +25,38 @@ services:
       - ./data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
+
+  namenode:
+    image: apache/hadoop:3
+    container_name: hadoop_namenode
+    hostname: namenode
+    restart: unless-stopped
+    command: ["hdfs", "namenode"]
+    ports:
+      - "9870:9870"
+      - "9000:9000"
+    env_file:
+      - ./config/hadoop/hadoop.env
+    environment:
+      - ENSURE_NAMENODE_DIR=/tmp/hadoop-root/dfs/name
+    volumes:
+      - hadoop_namenode:/opt/hadoop/data/name
+
+  datanode:
+    image: apache/hadoop:3
+    container_name: hadoop_datanode
+    hostname: datanode
+    restart: unless-stopped
+    command: ["hdfs", "datanode"]
+    ports:
+      - "9864:9864"
+    env_file:
+      - ./config/hadoop/hadoop.env
+    volumes:
+      - hadoop_datanode:/opt/hadoop/data/data
+    depends_on:
+      - namenode
+
+volumes:
+  hadoop_namenode:
+  hadoop_datanode:
