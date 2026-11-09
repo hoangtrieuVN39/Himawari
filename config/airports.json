@@ -1,0 +1,28 @@
+{
+  "airports": [
+    {
+      "icao": "VVDN",
+      "iata": "DAD",
+      "name": "Da Nang International Airport",
+      "latitude": 16.0439,
+      "longitude": 108.1994,
+      "timezone": "Asia/Ho_Chi_Minh"
+    },
+    {
+      "icao": "VVNB",
+      "iata": "HAN",
+      "name": "Noi Bai International Airport",
+      "latitude": 21.2212,
+      "longitude": 105.8072,
+      "timezone": "Asia/Ho_Chi_Minh"
+    },
+    {
+      "icao": "VVTS",
+      "iata": "SGN",
+      "name": "Tan Son Nhat International Airport",
+      "latitude": 10.8188,
+      "longitude": 106.6520,
+      "timezone": "Asia/Ho_Chi_Minh"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+services:
+  ingestor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: airport_weather_ingestor
+    restart: unless-stopped
+    volumes:
+      - ./config:/app/config:ro
+      - ./src:/app/src:ro
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: ["python", "-m", "src.ingestion.run_ingest", "--loop"]
+
+  runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: airport_weather_runner
+    profiles: ["tools"]
+    volumes:
+      - ./config:/app/config:ro
+      - ./src:/app/src:ro
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
