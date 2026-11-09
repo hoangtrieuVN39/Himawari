@@ -117,3 +117,4 @@ def ingest_metar(
         append_ingestion_log(log_entry, log_path=log_path)
 
         return log_entry
+

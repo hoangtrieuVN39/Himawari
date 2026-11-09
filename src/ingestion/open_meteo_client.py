@@ -123,3 +123,4 @@ def ingest_open_meteo(
             results.append(log_entry)
 
     return results
+

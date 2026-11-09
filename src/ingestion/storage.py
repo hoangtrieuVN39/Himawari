@@ -47,3 +47,4 @@ def append_ingestion_log(
     with path.open("a", encoding="utf-8") as f:
         f.write(line)
         f.flush()
+

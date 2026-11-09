@@ -46,3 +46,4 @@ def fetch_with_retry(
         raise requests.RequestException(f"Request failed: {last_error}") from last_error
 
     raise requests.RequestException("Request failed with unknown error")
+

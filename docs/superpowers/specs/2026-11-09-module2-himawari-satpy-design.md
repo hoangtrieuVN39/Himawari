@@ -159,3 +159,4 @@ Với việc bổ sung Hadoop HDFS ở chế độ Dual-Mode, bảng Ma trận l
 | **Độ trễ & Hiệu năng** | Độ trễ đọc/ghi thấp nhất trên 1 máy (không qua tầng mạng container). Làm bản dự phòng tức thời khi demo. | Có thêm độ trễ truyền qua WebHDFS/DataNode (được đo thực tế trong `hdfs_sync_log.jsonl`), nhưng sẵn sàng cho đọc song song nhiều DataNode. | Nhanh khi truy vấn điểm có chỉ mục, chậm hơn khi quét xử lý hàng loạt theo lô lớn. |
 | **Khả năng mở rộng** | Giới hạn bởi dung lượng ổ cứng của 1 máy cá nhân. | Mở rộng ngang bằng cách thêm container/máy `datanode` và tăng `dfs.replication` mà không phải sửa code PySpark. | Cần thiết kế sharding/partitioning phức tạp khi dữ liệu phình to. |
 | **Chi phí tài nguyên (RAM/Disk)** | Chiếm ~0 MB RAM nền; chỉ tốn dung lượng đĩa thực tế. | Tiêu thụ thêm ~1.5 GB RAM cho JVM của NameNode + DataNode. Do đó nhóm áp dụng **Dual-Mode linh hoạt**. | Tiêu thụ ~200–500 MB RAM nền cho dịch vụ CSDL và chi phí quản trị schema/backup. |
+

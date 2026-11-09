@@ -158,3 +158,4 @@
 - [ ] **Step 2: Execute live backfill `--once --backfill-hours 24` to collect real baseline datasets**
 - [ ] **Step 3: Inspect raw JSON files and audit log entries to verify schema conformity and byte count**
 - [ ] **Step 4: Commit working state and verify readiness for Module 2**
+

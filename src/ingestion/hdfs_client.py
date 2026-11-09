@@ -258,3 +258,4 @@ class WebHDFSClient:
             append_ingestion_log(summary, log_path=log_path)
 
         return summary
+

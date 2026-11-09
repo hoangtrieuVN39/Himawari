@@ -61,3 +61,4 @@ def test_append_ingestion_log(tmp_path):
     row2 = json.loads(lines[1])
     assert row1["batch_id"] == "batch_001"
     assert row2["status"] == "FAILED"
+

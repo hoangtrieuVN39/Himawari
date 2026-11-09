@@ -1,0 +1,427 @@
+{
+  "metadata": {
+    "batch_id": "20261109T095009Z_metar_498401",
+    "source": "aviationweather_metar",
+    "source_url": "https://aviationweather.gov/api/data/metar?ids=VVDN%2CVVNB%2CVVTS&format=json&hours=2",
+    "attribution": "NOAA/NWS Aviation Weather Center (https://aviationweather.gov/data/api/)",
+    "expected_slot_utc": "2026-11-09T09:50:09Z",
+    "fetched_at_utc": "2026-11-09T09:50:09Z",
+    "http_status": 200,
+    "airports_requested": [
+      "VVDN",
+      "VVNB",
+      "VVTS"
+    ],
+    "is_backfill": false,
+    "record_count": 12
+  },
+  "payload": [
+    {
+      "icaoId": "VVNB",
+      "receiptTime": "2026-11-09T09:35:29.436Z",
+      "obsTime": 1794216600,
+      "reportTime": "2026-11-09T09:30:00.000Z",
+      "temp": 17,
+      "dewp": 14,
+      "wdir": 360,
+      "wspd": 11,
+      "visib": "6+",
+      "altim": 1028,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR VVNB 090930Z 36011KT 9999 FEW016 SCT038 OVC060 17/14 Q1028 NOSIG",
+      "lat": 21.218,
+      "lon": 105.805,
+      "elev": 6,
+      "name": "Hanoi/Noi Bai Intl, HI, VN",
+      "cover": "OVC",
+      "clouds": [
+        {
+          "cover": "FEW",
+          "base": 1600
+        },
+        {
+          "cover": "SCT",
+          "base": 3800
+        },
+        {
+          "cover": "OVC",
+          "base": 6000
+        }
+      ],
+      "fltCat": "VFR"
+    },
+    {
+      "icaoId": "VVTS",
+      "receiptTime": "2026-11-09T09:35:29.469Z",
+      "obsTime": 1794216600,
+      "reportTime": "2026-11-09T09:30:00.000Z",
+      "temp": 34,
+      "dewp": 22,
+      "wdir": 130,
+      "wspd": 7,
+      "visib": "6+",
+      "altim": 1009,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR VVTS 090930Z 13007KT 090V160 9999 FEW024 34/22 Q1009 NOSIG",
+      "lat": 10.817,
+      "lon": 106.667,
+      "elev": 10,
+      "name": "Ho Chi Minh/Nhat Intl, 23, VN",
+      "cover": "FEW",
+      "clouds": [
+        {
+          "cover": "FEW",
+          "base": 2400
+        }
+      ],
+      "fltCat": "VFR"
+    },
+    {
+      "icaoId": "VVDN",
+      "receiptTime": "2026-11-09T09:35:29.407Z",
+      "obsTime": 1794216600,
+      "reportTime": "2026-11-09T09:30:00.000Z",
+      "temp": 28,
+      "dewp": 24,
+      "wdir": 100,
+      "wspd": 10,
+      "wgst": 22,
+      "visib": "6+",
+      "altim": 1016,
+      "qcField": 0,
+      "metarType": "METAR",
+      "rawOb": "METAR VVDN 090930Z 10010G22KT 050V130 9999 SCT017 FEW024TCU SCT050 28/24 Q1016 TEMPO 4000 SHRA",
+      "lat": 16.044,
+      "lon": 108.199,
+      "elev": 7,
+      "name": "Da Nang Intl, DN, VN",
+      "cover": "SCT",
+      "clouds": [
+        {
+          "cover": "SCT",
+          "base": 1700
+        },
+        {
+          "cover": "FEW",
+          "base": 2400
+        },
+        {
+          "cover": "SCT",
+          "base": 5000
+        }
+      ],
+      "fltCat": "VFR"
+    },
+    {
+      "icaoId": "VVNB",
+      "receiptTime": "2026-11-09T09:05:40.866Z",
+      "obsTime": 1794214800,
+      "reportTime": "2026-11-09T09:00:00.000Z",
+      "temp": 17,
+      "dewp": 14,
+      "wdir": 350,
+      "wspd": 10,
+      "visib": "6+",
+      "altim": 1028,
+      "qcField": 16,
+      "wxString": "-RA",
+      "metarType": "METAR",
+      "rawOb": "METAR VVNB 090900Z 35010KT 9999 -RA FEW017 SCT021 OVC040 17/14 Q1028 NOSIG",
+      "lat": 21.218,
+      "lon": 105.805,
+      "elev": 6,
+      "name": "Hanoi/Noi Bai Intl, HI, VN",
+      "cover": "OVC",
+      "clouds": [
+        {
+          "cover": "FEW",
+          "base": 1700
+        },
+        {
+          "cover": "SCT",
+          "base": 2100
+        },
+        {
+          "cover": "OVC",
+          "base": 4000
+        }
+      ],
+      "fltCat": "VFR"
+    },
+    {
+      "icaoId": "VVTS",
+      "receiptTime": "2026-11-09T09:05:40.893Z",
+      "obsTime": 1794214800,
+      "reportTime": "2026-11-09T09:00:00.000Z",
+      "temp": 34,
+      "dewp": 22,
+      "wdir": 150,
+      "wspd": 6,
+      "visib": "6+",
+      "altim": 1010,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR VVTS 090900Z 15006KT 9999 FEW023 SCT063 34/22 Q1010 NOSIG",
+      "lat": 10.817,
+      "lon": 106.667,
+      "elev": 10,
+      "name": "Ho Chi Minh/Nhat Intl, 23, VN",
+      "cover": "SCT",
+      "clouds": [
+        {
+          "cover": "FEW",
+          "base": 2300
+        },
+        {
+          "cover": "SCT",
+          "base": 6300
+        }
+      ],
+      "fltCat": "VFR"
+    },
+    {
+      "icaoId": "VVDN",
+      "receiptTime": "2026-11-09T09:05:40.840Z",
+      "obsTime": 1794214800,
+      "reportTime": "2026-11-09T09:00:00.000Z",
+      "temp": 29,
+      "dewp": 24,
+      "wdir": 110,
+      "wspd": 11,
+      "wgst": 22,
+      "visib": 4.35,
+      "altim": 1016,
+      "qcField": 0,
+      "wxString": "-RA",
+      "metarType": "METAR",
+      "rawOb": "METAR VVDN 090900Z 11011G22KT 070V150 7000 -RA SCT017 FEW020TCU BKN050 29/24 Q1016 TEMPO 4000 SHRA",
+      "lat": 16.044,
+      "lon": 108.199,
+      "elev": 7,
+      "name": "Da Nang Intl, DN, VN",
+      "cover": "BKN",
+      "clouds": [
+        {
+          "cover": "SCT",
+          "base": 1700
+        },
+        {
+          "cover": "FEW",
+          "base": 2000
+        },
+        {
+          "cover": "BKN",
+          "base": 5000
+        }
+      ],
+      "fltCat": "MVFR"
+    },
+    {
+      "icaoId": "VVTS",
+      "receiptTime": "2026-11-09T08:35:35.082Z",
+      "obsTime": 1794213000,
+      "reportTime": "2026-11-09T08:30:00.000Z",
+      "temp": 34,
+      "dewp": 22,
+      "wdir": 50,
+      "wspd": 6,
+      "visib": "6+",
+      "altim": 1009,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR VVTS 090830Z 05006KT 9999 FEW021 FEW025CB SCT066 34/22 Q1009 NOSIG",
+      "lat": 10.817,
+      "lon": 106.667,
+      "elev": 10,
+      "name": "Ho Chi Minh/Nhat Intl, 23, VN",
+      "cover": "SCT",
+      "clouds": [
+        {
+          "cover": "FEW",
+          "base": 2100
+        },
+        {
+          "cover": "FEW",
+          "base": 2500
+        },
+        {
+          "cover": "SCT",
+          "base": 6600
+        }
+      ],
+      "fltCat": "VFR"
+    },
+    {
+      "icaoId": "VVDN",
+      "receiptTime": "2026-11-09T08:35:35.018Z",
+      "obsTime": 1794213000,
+      "reportTime": "2026-11-09T08:30:00.000Z",
+      "temp": 29,
+      "dewp": 24,
+      "wdir": 100,
+      "wspd": 11,
+      "wgst": 23,
+      "visib": "6+",
+      "altim": 1016,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR VVDN 090830Z 10011G23KT 9999 SCT020 29/24 Q1016 NOSIG",
+      "lat": 16.044,
+      "lon": 108.199,
+      "elev": 7,
+      "name": "Da Nang Intl, DN, VN",
+      "cover": "SCT",
+      "clouds": [
+        {
+          "cover": "SCT",
+          "base": 2000
+        }
+      ],
+      "fltCat": "VFR"
+    },
+    {
+      "icaoId": "VVNB",
+      "receiptTime": "2026-11-09T08:35:35.050Z",
+      "obsTime": 1794213000,
+      "reportTime": "2026-11-09T08:30:00.000Z",
+      "temp": 17,
+      "dewp": 15,
+      "wdir": 350,
+      "wspd": 8,
+      "visib": "6+",
+      "altim": 1028,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR VVNB 090830Z 35008KT 9999 SCT022 BKN027 OVC056 17/15 Q1028 NOSIG",
+      "lat": 21.218,
+      "lon": 105.805,
+      "elev": 6,
+      "name": "Hanoi/Noi Bai Intl, HI, VN",
+      "cover": "OVC",
+      "clouds": [
+        {
+          "cover": "SCT",
+          "base": 2200
+        },
+        {
+          "cover": "BKN",
+          "base": 2700
+        },
+        {
+          "cover": "OVC",
+          "base": 5600
+        }
+      ],
+      "fltCat": "MVFR"
+    },
+    {
+      "icaoId": "VVNB",
+      "receiptTime": "2026-11-09T08:05:42.367Z",
+      "obsTime": 1794211200,
+      "reportTime": "2026-11-09T08:00:00.000Z",
+      "temp": 17,
+      "dewp": 15,
+      "wdir": 360,
+      "wspd": 9,
+      "visib": "6+",
+      "altim": 1028,
+      "qcField": 16,
+      "wxString": "-RA",
+      "metarType": "METAR",
+      "rawOb": "METAR VVNB 090800Z 36009KT 9999 -RA FEW021 BKN028 OVC058 17/15 Q1028 NOSIG",
+      "lat": 21.218,
+      "lon": 105.805,
+      "elev": 6,
+      "name": "Hanoi/Noi Bai Intl, HI, VN",
+      "cover": "OVC",
+      "clouds": [
+        {
+          "cover": "FEW",
+          "base": 2100
+        },
+        {
+          "cover": "BKN",
+          "base": 2800
+        },
+        {
+          "cover": "OVC",
+          "base": 5800
+        }
+      ],
+      "fltCat": "MVFR"
+    },
+    {
+      "icaoId": "VVDN",
+      "receiptTime": "2026-11-09T08:05:42.331Z",
+      "obsTime": 1794211200,
+      "reportTime": "2026-11-09T08:00:00.000Z",
+      "temp": 28,
+      "dewp": 24,
+      "wdir": 110,
+      "wspd": 13,
+      "visib": 4.97,
+      "altim": 1016,
+      "qcField": 16,
+      "wxString": "-RA",
+      "metarType": "METAR",
+      "rawOb": "METAR VVDN 090800Z 11013KT 070V150 8000 -RA SCT017 FEW023TCU SCT050 28/24 Q1016 NOSIG",
+      "lat": 16.044,
+      "lon": 108.199,
+      "elev": 7,
+      "name": "Da Nang Intl, DN, VN",
+      "cover": "SCT",
+      "clouds": [
+        {
+          "cover": "SCT",
+          "base": 1700
+        },
+        {
+          "cover": "FEW",
+          "base": 2300
+        },
+        {
+          "cover": "SCT",
+          "base": 5000
+        }
+      ],
+      "fltCat": "MVFR"
+    },
+    {
+      "icaoId": "VVTS",
+      "receiptTime": "2026-11-09T08:05:42.407Z",
+      "obsTime": 1794211200,
+      "reportTime": "2026-11-09T08:00:00.000Z",
+      "temp": 34,
+      "dewp": 22,
+      "wdir": 40,
+      "wspd": 6,
+      "visib": "6+",
+      "altim": 1009,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR VVTS 090800Z 04006KT 9999 FEW021 FEW025CB SCT064 34/22 Q1009 NOSIG",
+      "lat": 10.817,
+      "lon": 106.667,
+      "elev": 10,
+      "name": "Ho Chi Minh/Nhat Intl, 23, VN",
+      "cover": "SCT",
+      "clouds": [
+        {
+          "cover": "FEW",
+          "base": 2100
+        },
+        {
+          "cover": "FEW",
+          "base": 2500
+        },
+        {
+          "cover": "SCT",
+          "base": 6400
+        }
+      ],
+      "fltCat": "VFR"
+    }
+  ]
+}

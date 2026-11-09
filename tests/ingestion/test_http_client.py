@@ -47,3 +47,4 @@ def test_fetch_with_retry_exhausted(mocker):
         fetch_with_retry("https://api.example.com/fail", max_retries=3, backoff_factor=0.01)
 
     assert mock_get.call_count == 3
+

@@ -67,3 +67,4 @@ def test_ingest_metar_failure(tmp_path, mocker):
     log_entry = json.loads(lines[-1])
     assert log_entry["status"] == "FAILED"
     assert log_entry["error_type"] == "Exception"
+
