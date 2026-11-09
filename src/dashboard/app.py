@@ -19,6 +19,7 @@ import pandas as pd
 import streamlit as st
 
 from src.dashboard.data_loader import (
+    fetch_and_update_realtime,
     get_b13_image_sequence,
     load_audit_and_reconciliation,
     load_decision_slots,
@@ -82,19 +83,61 @@ def main() -> None:
     else:
         available_slots = sorted(slots.keys())
 
-    # Format review slot labels showing both UTC and VN time
+    latest_slot_key = available_slots[-1]
+
+    # Format review slot labels showing both UTC and VN time + LIVE badge for newest slot
     def format_slot(slot_key: str) -> str:
         if slots and slot_key in slots and slots[slot_key]:
             first = slots[slot_key][0]
-            return f"{first.get('slot_utc_hhmm', '07:00Z')} ({first.get('slot_vn_hhmm', '14:00')} ICT) — {slot_key[:10]}"
+            badge = " 🟢 [LIVE MỚI NHẤT]" if slot_key == latest_slot_key and len(available_slots) > 2 else ""
+            return f"{first.get('slot_utc_hhmm', '07:00Z')} ({first.get('slot_vn_hhmm', '14:00')} ICT) — {slot_key[:10]}{badge}"
         return slot_key
 
-    selected_slot = st.sidebar.selectbox(
-        "Mốc rà soát phát lại (Replay Slot):",
-        options=available_slots,
-        format_func=format_slot,
-        help="Chọn thời điểm phát lại lịch sử để rà soát thời tiết tại 3 sân bay",
+    operating_mode = st.sidebar.radio(
+        "Chế độ vận hành:",
+        options=[
+            "🟢 Trực tiếp Thời gian thực (LIVE Realtime)",
+            "⏪ Phát lại Lịch sử (Historical Replay)",
+        ],
+        index=0,
+        help="Chế độ LIVE hiển thị bản tin thời tiết thực tế mới nhất vừa thu thập; Chế độ Phát lại phục vụ kiểm thử KPI ở các mốc chuẩn (07:00Z, 08:00Z).",
     )
+    is_live_mode = operating_mode.startswith("🟢")
+
+    if is_live_mode:
+        selected_slot = st.sidebar.selectbox(
+            "Mốc thời gian (Đang chọn LIVE mới nhất):",
+            options=available_slots,
+            index=len(available_slots) - 1,
+            format_func=format_slot,
+            help="Mặc định chọn mốc thời gian thực mới nhất đã đồng bộ từ API & vệ tinh",
+        )
+        include_hima_live = st.sidebar.checkbox(
+            "Tải kèm ảnh vệ tinh Himawari-9 B13 mới nhất từ S3",
+            value=True,
+            help="Khi bật, hệ thống sẽ tải thêm phân đoạn HSD B13 mới nhất từ NOAA S3 và cắt ảnh PNG cho 3 sân bay (~15–25s)",
+        )
+        if st.sidebar.button("🔄 Cập nhật Dữ liệu Realtime Ngay", use_container_width=True, type="primary"):
+            with st.sidebar.status("Đang thu thập METAR, Open-Meteo & Himawari-9 B13 trực tiếp...", expanded=True) as live_status:
+                res = fetch_and_update_realtime(storage_root=storage_root, include_himawari=include_hima_live)
+                if res.get("status") == "SUCCESS":
+                    live_status.update(
+                        label=f"✅ Đã cập nhật mốc LIVE {res.get('latest_slot_utc', '')}!",
+                        state="complete",
+                    )
+                    st.sidebar.success(f"Đã đồng bộ mốc mới nhất: {res.get('latest_slot_utc')}")
+                    st.rerun()
+                else:
+                    live_status.update(label="❌ Lỗi khi thu thập dữ liệu trực tiếp", state="error")
+                    st.sidebar.error(f"Chi tiết: {res.get('error')}")
+    else:
+        selected_slot = st.sidebar.selectbox(
+            "Mốc rà soát phát lại (Replay Slot):",
+            options=available_slots,
+            index=0,
+            format_func=format_slot,
+            help="Chọn thời điểm phát lại lịch sử (07:00Z hoặc 08:00Z) để rà soát thời tiết tại 3 sân bay",
+        )
 
     sort_mode_label = st.sidebar.selectbox(
         "Thứ tự hiển thị bảng:",
@@ -131,7 +174,7 @@ def main() -> None:
                 st.sidebar.error(f"Ngoại lệ: {e}")
 
     st.sidebar.markdown("---")
-    st.sidebar.caption("⚡ Offline-Ready: Đọc bảng dữ liệu tức thì (< 1s)")
+    st.sidebar.caption("⚡ Hỗ trợ cả LIVE Realtime (API + S3) & Phát lại Lịch sử (< 1s)")
 
     # --- MAIN CONTENT AREA ---
     slot_rows = slots.get(selected_slot, [])
@@ -139,10 +182,13 @@ def main() -> None:
 
     slot_utc_display = sorted_rows[0].get("slot_utc_hhmm", "07:00Z") if sorted_rows else "07:00Z"
     slot_vn_display = sorted_rows[0].get("slot_vn_hhmm", "14:00") if sorted_rows else "14:00"
+    slot_date_display = selected_slot[:10] if selected_slot else "2026-11-09"
+    mode_badge = "🟢 LIVE REALTIME" if selected_slot == latest_slot_key and len(available_slots) > 2 else "⏪ REPLAY LỊCH SỬ"
 
     st.title("🛫 Hệ thống Hỗ trợ Điều phối viên Rà soát Thời tiết Sân bay")
     st.caption(
-        f"Mốc thời gian rà soát đang chọn: **{slot_utc_display}** (Tương đương **{slot_vn_display} ICT** · Ngày 2026-11-09) "
+        f"Trạng thái: **{mode_badge}** | Mốc thời gian rà soát đang chọn: **{slot_utc_display}** "
+        f"(Tương đương **{slot_vn_display} ICT** · Ngày {slot_date_display}) "
         f"| Thứ tự bảng: **{sort_mode_label}**"
     )
 

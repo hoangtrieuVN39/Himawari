@@ -24,9 +24,19 @@ def test_load_decision_slots_and_sort_modes_preserve_co_priority():
     slots = load_decision_slots("data")
     assert "2026-11-09T07:00:00Z" in slots
     assert "2026-11-09T08:00:00Z" in slots
+    assert "2026-11-09T16:45:00Z" in slots
 
     slot_08 = slots["2026-11-09T08:00:00Z"]
     assert len(slot_08) == 3
+
+    slot_live = slots["2026-11-09T16:45:00Z"]
+    assert len(slot_live) == 3
+    for r in slot_live:
+        assert r["slot_utc_hhmm"] == "16:45Z"
+        assert r["slot_vn_hhmm"] == "23:45"
+        assert r["obs_utc_hhmm"] == "16:30Z"
+        assert r["obs_vn_hhmm"] == "23:30"
+        assert r["forecast_is_present"] is True
 
     asc = sort_slot_rows(slot_08, "icao_asc")
     desc = sort_slot_rows(slot_08, "icao_desc")

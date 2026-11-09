@@ -3,9 +3,11 @@
 import argparse
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+from pyspark.sql.types import TimestampType
 from src.spark.priority_engine import apply_priority_rules
 from src.spark.quarantine import (
     build_reconciliation_report,
@@ -24,6 +26,44 @@ from src.spark.temporal_join import build_point_in_time_snapshot
 from src.spark.transforms import enrich_valid_himawari, enrich_valid_metar
 
 
+def discover_latest_slot_utc(storage_root: str = "data") -> str | None:
+    """Finds the latest ingested METAR timestamp on disk and rounds up to a 5-min UTC slot."""
+    metar_root = Path(storage_root) / "raw" / "metar"
+    if not metar_root.exists():
+        return None
+    files = sorted(metar_root.glob("date=*/*.json"))
+    if not files:
+        return None
+    latest_file = files[-1]
+    try:
+        data = json.loads(latest_file.read_text(encoding="utf-8"))
+        fetched_str = data.get("metadata", {}).get("fetched_at_utc")
+        if fetched_str:
+            dt = datetime.fromisoformat(fetched_str.replace("Z", "+00:00")).astimezone(timezone.utc)
+            # Round up to next 5-minute mark so all files from the cycle satisfy fetched_at <= slot
+            rem = dt.minute % 5
+            if rem != 0 or dt.second > 0:
+                dt = dt.replace(second=0, microsecond=0) + timedelta(minutes=(5 - rem))
+            else:
+                dt = dt.replace(second=0, microsecond=0)
+            return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    except Exception:
+        return None
+    return None
+
+
+def _format_timestamp_columns_utc(df):
+    """Formats all TimestampType columns as explicit UTC ISO strings ('yyyy-MM-ddTHH:mm:ssZ')."""
+    out = df
+    for field in df.schema.fields:
+        if isinstance(field.dataType, TimestampType):
+            out = out.withColumn(
+                field.name,
+                F.date_format(F.col(field.name), "yyyy-MM-dd'T'HH:mm:ss'Z'"),
+            )
+    return out
+
+
 def parse_args(args: list[str] | None = None) -> argparse.Namespace:
     """Parses CLI arguments for PySpark processing pipeline."""
     parser = argparse.ArgumentParser(description="PySpark ETL Pipeline for Airport Weather Review")
@@ -36,8 +76,8 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--review-slots",
         type=str,
-        default="2026-11-09T07:00:00Z,2026-11-09T08:00:00Z",
-        help="Comma-separated ISO UTC review slot timestamps (default: 07:00Z,08:00Z replay slots)",
+        default="auto",
+        help="Comma-separated ISO UTC review slot timestamps, or 'auto' (replay + latest live slot)",
     )
     parser.add_argument(
         "--mode",
@@ -127,7 +167,7 @@ def run_spark_pipeline(
     dec_jsonl_path = processed_root / "decision_table" / "decision_table.jsonl"
     dec_jsonl_path.parent.mkdir(parents=True, exist_ok=True)
 
-    rows = decision_df.collect()
+    rows = _format_timestamp_columns_utc(decision_df).collect()
     with dec_jsonl_path.open("w", encoding="utf-8") as f:
         for r in rows:
             d = r.asDict(recursive=True)
@@ -139,7 +179,7 @@ def run_spark_pipeline(
 
     q_jsonl_path = processed_root / "quarantine" / "quarantine_records.jsonl"
     q_jsonl_path.parent.mkdir(parents=True, exist_ok=True)
-    q_rows = quarantine_all_df.collect()
+    q_rows = _format_timestamp_columns_utc(quarantine_all_df).collect()
     with q_jsonl_path.open("w", encoding="utf-8") as f:
         for r in q_rows:
             d = r.asDict(recursive=True)
@@ -162,7 +202,19 @@ def run_spark_pipeline(
 
 def main():
     args = parse_args()
-    slots = [s.strip() for s in args.review_slots.split(",") if s.strip()]
+    raw_slots_arg = args.review_slots.strip()
+    if raw_slots_arg.lower() in ("auto", "latest"):
+        base_slots = [
+            "2026-11-09T07:00:00Z",
+            "2026-11-09T08:00:00Z",
+            "2026-11-09T11:00:00Z",
+        ]
+        latest = discover_latest_slot_utc(args.storage_root)
+        if latest and latest not in base_slots:
+            base_slots.append(latest)
+        slots = sorted(base_slots)
+    else:
+        slots = [s.strip() for s in raw_slots_arg.split(",") if s.strip()]
     result = run_spark_pipeline(
         storage_root=args.storage_root,
         review_slots=slots,
