@@ -155,13 +155,16 @@ def download_himawari_slot(
     scan_dt_utc: datetime,
     segments: Optional[List[str]] = None,
     base_dir: str = "data",
-    is_backfill: bool = False
+    is_backfill: bool = False,
+    source_dt_utc: Optional[datetime] = None,
 ) -> Dict[str, Any]:
     """
     Downloads requested Himawari-9 segments for the given scan slot.
     Saves atomically via .tmp file and os.replace into:
       <base_dir>/raw/himawari_hsd/date=YYYY-MM-DD/slot=HHMM/<filename>
     Logs audit record to <base_dir>/logs/ingestion_log.jsonl.
+    If source_dt_utc is provided, builds S3 download URL from source_dt_utc while
+    saving under scan_dt_utc timeline.
     """
     if segments is None:
         segments = list(DEFAULT_SEGMENTS)
@@ -170,6 +173,12 @@ def download_himawari_slot(
         scan_dt_utc = scan_dt_utc.replace(tzinfo=timezone.utc)
     else:
         scan_dt_utc = scan_dt_utc.astimezone(timezone.utc)
+
+    if source_dt_utc is not None:
+        if source_dt_utc.tzinfo is None:
+            source_dt_utc = source_dt_utc.replace(tzinfo=timezone.utc)
+        else:
+            source_dt_utc = source_dt_utc.astimezone(timezone.utc)
 
     now = datetime.now(timezone.utc)
     now_iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -187,8 +196,11 @@ def download_himawari_slot(
     downloaded_files: Dict[str, str] = {}
     total_bytes = 0
 
+    fetch_dt = source_dt_utc if source_dt_utc is not None else scan_dt_utc
+
     for seg in segments:
-        url, filename = build_s3_segment_url(scan_dt_utc, segment=seg, band=DEFAULT_BAND)
+        url, _ = build_s3_segment_url(fetch_dt, segment=seg, band=DEFAULT_BAND)
+        _, filename = build_s3_segment_url(scan_dt_utc, segment=seg, band=DEFAULT_BAND)
         target_path = target_slot_dir / filename
         temp_path = target_slot_dir / f"{filename}.tmp"
 
@@ -225,6 +237,7 @@ def download_himawari_slot(
         "batch_id": batch_id,
         "source": "himawari_hsd",
         "expected_slot_utc": slot_iso,
+        "source_slot_utc": source_dt_utc.strftime("%Y-%m-%dT%H:%M:%SZ") if source_dt_utc else slot_iso,
         "fetched_at_utc": now_iso,
         "status": status,
         "expected_segments": expected_count,
