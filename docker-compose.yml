@@ -62,6 +62,7 @@ services:
     image: apache/hadoop:3
     container_name: hadoop_namenode
     hostname: namenode
+    user: root
     restart: unless-stopped
     command: ["hdfs", "namenode"]
     ports:
@@ -70,7 +71,7 @@ services:
     env_file:
       - ./config/hadoop/hadoop.env
     environment:
-      - ENSURE_NAMENODE_DIR=/tmp/hadoop-root/dfs/name
+      - ENSURE_NAMENODE_DIR=/opt/hadoop/data/name/current
     volumes:
       - hadoop_namenode:/opt/hadoop/data/name
 
@@ -78,6 +79,7 @@ services:
     image: apache/hadoop:3
     container_name: hadoop_datanode
     hostname: datanode
+    user: root
     restart: unless-stopped
     command: ["hdfs", "datanode"]
     ports:
