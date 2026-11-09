@@ -10,6 +10,11 @@ import sys
 import time
 from typing import Any
 
+# Ensure project root is in sys.path when launched directly via `streamlit run src/dashboard/app.py`
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 import pandas as pd
 import streamlit as st
 
