@@ -310,3 +310,4 @@ def compute_kpi_summary(trials: list[dict[str, Any]]) -> dict[str, Any]:
     result["meets_30_pct_target"] = meets_target
 
     return result
+
