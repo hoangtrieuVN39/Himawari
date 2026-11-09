@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11-slim-bookworm
 
 # Install OpenJDK 17 and procps for PySpark
 RUN apt-get update && \
