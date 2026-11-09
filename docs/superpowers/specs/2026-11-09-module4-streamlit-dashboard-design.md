@@ -145,3 +145,4 @@ DLL/
 
 3. **Kiểm thử Khởi chạy Giao diện (`tests/dashboard/test_app_smoke.py`):**
    - Render ứng dụng Streamlit bằng `streamlit.testing.v1.AppTest` (hoặc kiểm tra hàm điều phối giao diện) đảm bảo không phát sinh bất kỳ ngoại lệ nào khi chuyển đổi giữa các Tab và các mốc phát lại.
+

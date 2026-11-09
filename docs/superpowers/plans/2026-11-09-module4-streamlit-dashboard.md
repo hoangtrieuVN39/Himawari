@@ -53,13 +53,13 @@
   - `get_b13_image_sequence(storage_root: str, airport_icao: str, up_to_utc_iso: str, max_frames: int = 6) -> list[dict]` returning `[{"scan_time_utc": str, "utc_hhmm": str, "vn_hhmm": str, "png_path": str}]` ordered chronologically `<= up_to_utc_iso`
   - `load_audit_and_reconciliation(storage_root: str = "data") -> dict` returning reconciliation report, quarantine rows, synthetic quarantine samples, binary file errors, ingestion coverage stats, and HDFS sync stats
 
-- [ ] **Step 1: Add `streamlit>=1.32.0` to `requirements.txt`, install in `.venv`, and add `dashboard` service to `docker-compose.yml` + `run_dashboard.bat`**
+- [x] **Step 1: Add `streamlit>=1.32.0` to `requirements.txt`, install in `.venv`, and add `dashboard` service to `docker-compose.yml` + `run_dashboard.bat`**
 
 In `requirements.txt`, append `streamlit>=1.32.0`.
 In `docker-compose.yml`, add service `dashboard` building `.`, exposing port `8501:8501`, mounting `./data:/app/data` and `./config:/app/config`, running `streamlit run src/dashboard/app.py --server.port=8501 --server.address=0.0.0.0`.
 Create `run_dashboard.bat` launching `.venv\Scripts\streamlit.exe run src/dashboard/app.py`.
 
-- [ ] **Step 2: Write failing tests in `tests/dashboard/test_data_loader.py`**
+- [x] **Step 2: Write failing tests in `tests/dashboard/test_data_loader.py`**
 
 ```python
 from src.dashboard.data_loader import (
@@ -114,24 +114,24 @@ def test_load_audit_and_reconciliation_returns_all_sections():
     assert len(audit["synthetic_quarantine_preview"]) >= 1
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `.venv\Scripts\pytest.exe tests/dashboard/test_data_loader.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'src.dashboard.data_loader'`
 
-- [ ] **Step 4: Implement `src/dashboard/data_loader.py`**
+- [x] **Step 4: Implement `src/dashboard/data_loader.py`**
 
 Implement `normalize_timestamp_pair`, `load_decision_slots`, `sort_slot_rows`, `get_b13_image_sequence`, and `load_audit_and_reconciliation`.
 In `normalize_timestamp_pair(ts_str, raw_ob)`:
 - Extract regex `\b(\d{2})(\d{2})(\d{2})Z\b` from `raw_ob` if provided; use its `HH:MM` as the canonical UTC hour/minute on the date of `ts_str`, and compute Vietnam time as `UTC + 7 hours`.
 - If `raw_ob` is not provided and `ts_str` has no `"Z"` or `"+00:00"`, check if `ts_str` hour is `>= 13` while matching a `2026-11-09` replay slot (`14:00` $\rightarrow$ `07:00Z`, `15:00` $\rightarrow$ `08:00Z`), or treat ISO strings ending in `Z` directly as UTC.
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `.venv\Scripts\pytest.exe tests/dashboard/test_data_loader.py -v`
 Expected: PASS (4 passed)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add requirements.txt docker-compose.yml run_dashboard.bat src/dashboard/__init__.py src/dashboard/data_loader.py tests/dashboard/__init__.py tests/dashboard/test_data_loader.py
@@ -340,3 +340,4 @@ Expected: All dashboard and ingestion/crawler tests PASS with 0 errors.
 git add src/dashboard/app.py tests/dashboard/test_app_smoke.py README.md docs/superpowers/plans/2026-11-09-module4-streamlit-dashboard.md
 git commit -m "feat(dashboard): implement multi-tab Streamlit decision dashboard, replay inspector and KPI timer"
 ```
+
