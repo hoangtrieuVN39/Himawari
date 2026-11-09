@@ -158,7 +158,7 @@ git commit -m "feat(dashboard): add replay data loader, UTC/VN time normalizer a
   - `load_kpi_trials(log_path: str = "data/logs/kpi_trials_log.jsonl", include_seeds: bool = True) -> list[dict]`
   - `compute_kpi_summary(trials: list[dict]) -> dict`
 
-- [ ] **Step 1: Write failing tests in `tests/dashboard/test_kpi_evaluator.py`**
+- [x] **Step 1: Write failing tests in `tests/dashboard/test_kpi_evaluator.py`**
 
 ```python
 from src.dashboard.data_loader import load_decision_slots, sort_slot_rows
@@ -252,21 +252,21 @@ def test_compute_kpi_summary_calculates_median_and_reduction(tmp_path):
     assert summary["meets_30_pct_target"] is True
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `.venv\Scripts\pytest.exe tests/dashboard/test_kpi_evaluator.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'src.dashboard.kpi_evaluator'`
 
-- [ ] **Step 3: Implement `src/dashboard/kpi_evaluator.py` and seed `data/logs/kpi_trials_log.jsonl`**
+- [x] **Step 3: Implement `src/dashboard/kpi_evaluator.py` and seed `data/logs/kpi_trials_log.jsonl`**
 
 Implement `evaluate_kpi_submission`, `matches_observation_time`, `append_kpi_trial`, `load_kpi_trials`, and `compute_kpi_summary`. Seed `data/logs/kpi_trials_log.jsonl` with 8 initial trial records (4 `baseline_3_sources` and 4 `dashboard` across `07:00Z` and `08:00Z`, all tagged `"is_sample_seed": true`) so the KPI dashboard tab displays a complete comparison table immediately upon startup.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `.venv\Scripts\pytest.exe tests/dashboard/test_kpi_evaluator.py -v`
 Expected: PASS (3 passed)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/dashboard/kpi_evaluator.py tests/dashboard/test_kpi_evaluator.py data/logs/kpi_trials_log.jsonl
@@ -305,7 +305,7 @@ git commit -m "feat(dashboard): add KPI trial auto-grader, UTC/VN time matcher a
       - Trình xem bản ghi lỗi `quarantine` (kèm bản xem trước `synthetic_quarantine` và nhật ký tệp nhị phân hỏng `himawari_file_errors.jsonl`).
       - Thống kê thực nghiệm 5V (`ingestion_log.jsonl`) và tốc độ đồng bộ Hadoop WebHDFS (`hdfs_sync_log.jsonl`).
 
-- [ ] **Step 1: Write failing smoke test in `tests/dashboard/test_app_smoke.py`**
+- [x] **Step 1: Write failing smoke test in `tests/dashboard/test_app_smoke.py`**
 
 ```python
 from streamlit.testing.v1 import AppTest
@@ -318,23 +318,23 @@ def test_streamlit_app_renders_without_exception():
     assert len(at.tabs) == 3
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `.venv\Scripts\pytest.exe tests/dashboard/test_app_smoke.py -v`
 Expected: FAIL (file `src/dashboard/app.py` does not exist)
 
-- [ ] **Step 3: Implement `src/dashboard/app.py` and update `README.md`**
+- [x] **Step 3: Implement `src/dashboard/app.py` and update `README.md`**
 
 Implement `src/dashboard/app.py` with clean Vietnamese labels, clear visual hierarchy, and full error resilience. Update `README.md` with instructions for launching the Streamlit dashboard via `run_dashboard.bat`, `.venv\Scripts\streamlit.exe run src/dashboard/app.py`, or `docker compose up -d dashboard`.
 
-- [ ] **Step 4: Run all dashboard tests and full repository test suite**
+- [x] **Step 4: Run all dashboard tests and full repository test suite**
 
 Run:
 `.venv\Scripts\pytest.exe tests/dashboard/ -v`
 `.venv\Scripts\pytest.exe -k "not spark" -v`
 Expected: All dashboard and ingestion/crawler tests PASS with 0 errors.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/dashboard/app.py tests/dashboard/test_app_smoke.py README.md docs/superpowers/plans/2026-11-09-module4-streamlit-dashboard.md

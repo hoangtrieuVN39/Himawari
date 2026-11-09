@@ -31,6 +31,13 @@ Hệ thống bao gồm ba tầng xử lý dữ liệu phối hợp:
 - **Động cơ Phân cấp Ưu tiên Đa yếu tố (Levels 1–4):** Xếp hạng độ nguy hiểm thời tiết theo 4 cấp bậc và xử lý đồng mức ưu tiên (`co-priority ties`) công bằng, kèm giải thích tiếng Việt tường minh.
 - **Bảng Quyết định (Decision Table):** Xuất bảng dữ liệu 3 dòng/lượt rà soát (mỗi sân bay 1 dòng) dạng JSONL/Parquet phục vụ Dashboard Streamlit ở Mô-đun 4.
 
+### 4. Mô-đun 4: Dashboard Streamlit Rà soát Quyết định, Phát lại Lịch sử (Replay), Đo lường KPI & Đối soát Chất lượng Dữ liệu
+- **Giao diện Đa Tab Trực quan:** Cấu trúc 3 Tab đáp ứng nghiệp vụ điều phối viên, đo lường thực nghiệm CLO4 và đối soát kỹ thuật CLO2/CLO3. Nạp dữ liệu tức thì (< 1s) ở chế độ ngoại tuyến (Offline Ready).
+- **Bảng Rà soát Quyết định & Xử lý Đồng mức (Tab 1):** Hiển thị song song giờ UTC (`HH:MMZ`) và Giờ Việt Nam (`ICT`), nêu bật sân bay ưu tiên và banner cảnh báo màu cam khi có đồng mức ưu tiên đầu (`Co-Priority Tie`), hỗ trợ đảo thứ tự dòng hiển thị mà không ảnh hưởng kết quả.
+- **Truy nguyên Bằng chứng 3 Nguồn (Provenance Drill-Down):** Bản tin METAR gốc (giờ nhận, tuổi dữ liệu, hiện tượng thời tiết), mã dự báo mưa Open-Meteo, và chuỗi tối đa 6 ảnh vệ tinh Himawari-9 B13 trước sự kiện (Time-Lapse 10 phút/ảnh) kèm bộ chỉ số Dual-Box ($\pm 1.0^\circ$ và $\pm 0.25^\circ$).
+- **Đo lường & Chấm điểm Tự động KPI (Tab 2 — CLO4):** Tích hợp bộ bấm giờ nhận ca, đối chiếu giữa chế độ Xem 3 Nguồn Rời (Baseline) và Xem Dashboard Tổng hợp, tự động chấm điểm và tính toán % rút ngắn thời gian trung vị đạt mục tiêu $\ge 30\%$.
+- **Đối soát Bảo toàn Dòng & Quarantine (Tab 3 — CLO2/CLO3):** Bảng đối soát bảo toàn dòng cho cả 3 nguồn, trình xem bản ghi cách ly lỗi, nhật ký lỗi tệp nhị phân và thống kê thông lượng Hadoop HDFS.
+
 ---
 
 ## Hướng dẫn Vận hành Nhanh (Dành cho Người mới bắt đầu)
@@ -93,7 +100,20 @@ Chạy pipeline phân tích dữ liệu, đối soát và sinh bảng quyết đ
   .venv\Scripts\python.exe -m src.spark.run_pipeline --inject-quarantine-test
   ```
 
-### 8. Chạy Toàn bộ Bộ Kiểm thử Tự động (Unit & Integration Tests)
+### 8. Khởi chạy Giao diện Dashboard Streamlit (Mô-đun 4)
+- **Cách 1: Khởi chạy 1 chạm trên Windows:**
+  Click đúp vào file `run_dashboard.bat` trong thư mục gốc dự án.
+- **Cách 2: Khởi chạy bằng dòng lệnh (.venv):**
+  ```bash
+  .venv\Scripts\streamlit.exe run src/dashboard/app.py
+  ```
+- **Cách 3: Khởi chạy bằng Docker Compose:**
+  ```bash
+  docker compose up -d dashboard
+  ```
+  Truy cập giao diện tại: `http://localhost:8501`.
+
+### 9. Chạy Toàn bộ Bộ Kiểm thử Tự động (Unit & Integration Tests)
 ```bash
 .venv\Scripts\pytest.exe tests/ -v
 ```
@@ -117,18 +137,26 @@ DLL/
 │   │   ├── satpy_processor.py        # Cắt tọa độ bằng Satpy, tính chỉ số đám mây, vẽ PNG
 │   │   ├── hdfs_client.py            # Khách WebHDFS đẩy dữ liệu & đo benchmark thông lượng
 │   │   └── run_ingest.py             # Điểm điều phối CLI chính (--once, --loop, v.v.)
-│   └── spark/                        # Mô-đun 3: Xử lý Big Data & Động cơ Ưu tiên
-│       ├── session.py                # Khởi tạo SparkSession tối ưu cục bộ/HDFS
-│       ├── schemas.py                # Schema PySpark nghiêm ngặt cho 3 nguồn dữ liệu
-│       ├── readers.py                # Trình đọc JSON hỗ trợ _corrupt_record
-│       ├── quarantine.py             # Phân tách cách ly & báo cáo đối soát bảo toàn dòng
-│       ├── transforms.py             # Chuẩn hóa tầm nhìn, mã thời tiết, phân loại mây B13
-│       ├── temporal_join.py          # Ghép dữ liệu Point-in-Time không rò rỉ tương lai
-│       ├── priority_engine.py        # Động cơ phân cấp Level 1–4 & giải quyết đồng mức
-│       └── run_pipeline.py           # Điều phối CLI pipeline PySpark và xuất bảng quyết định
+│   ├── spark/                        # Mô-đun 3: Xử lý Big Data & Động cơ Ưu tiên
+│   │   ├── session.py                # Khởi tạo SparkSession tối ưu cục bộ/HDFS
+│   │   ├── schemas.py                # Schema PySpark nghiêm ngặt cho 3 nguồn dữ liệu
+│   │   ├── readers.py                # Trình đọc JSON hỗ trợ _corrupt_record
+│   │   ├── quarantine.py             # Phân tách cách ly & báo cáo đối soát bảo toàn dòng
+│   │   ├── transforms.py             # Chuẩn hóa tầm nhìn, mã thời tiết, phân loại mây B13
+│   │   ├── temporal_join.py          # Ghép dữ liệu Point-in-Time không rò rỉ tương lai
+│   │   ├── priority_engine.py        # Động cơ phân cấp Level 1–4 & giải quyết đồng mức
+│   │   └── run_pipeline.py           # Điều phối CLI pipeline PySpark và xuất bảng quyết định
+│   └── dashboard/                    # Mô-đun 4: Giao diện Streamlit & Công cụ Đánh giá KPI
+│       ├── data_loader.py            # Nạp & chuẩn hóa mốc thời gian UTC/VN, tìm chuỗi 6 ảnh B13
+│       ├── kpi_evaluator.py          # Chấm điểm tự động KPI, lưu/đọc kpi_trials_log.jsonl & tính Median
+│       └── app.py                    # Ứng dụng Streamlit 3 Tab (Rà soát, KPI, Đối soát)
 ├── tests/
 │   ├── ingestion/                    # Kiểm thử đơn vị cho tầng Ingestion (43 test cases)
-│   └── spark/                        # Kiểm thử đơn vị & tích hợp cho PySpark (18 test cases)
+│   ├── spark/                        # Kiểm thử đơn vị & tích hợp cho PySpark (18 test cases)
+│   └── dashboard/                    # Kiểm thử đơn vị & smoke test cho Dashboard (12 test cases)
+│       ├── test_data_loader.py
+│       ├── test_kpi_evaluator.py
+│       └── test_app_smoke.py
 ├── data/
 │   ├── raw/                          # Lớp dữ liệu thô (Hive partition YYYY-MM-DD)
 │   │   ├── metar/date=YYYY-MM-DD/
@@ -143,9 +171,11 @@ DLL/
 │   └── logs/                         # Nhật ký kiểm toán & chỉ số 5V
 │       ├── ingestion_log.jsonl       # Bảng đối soát số lượt quét, số bản ghi, byte thực tải
 │       ├── himawari_file_errors.jsonl# Nhật ký cô lập tệp nhị phân vệ tinh bị hỏng
-│       └── hdfs_sync_log.jsonl       # Nhật ký đo kiểm thông lượng WebHDFS (MB/s)
-├── docker-compose.yml                # Docker Compose bao gồm Ingestor, NameNode, DataNode, Spark
+│       ├── hdfs_sync_log.jsonl       # Nhật ký đo kiểm thông lượng WebHDFS (MB/s)
+│       └── kpi_trials_log.jsonl      # Nhật ký đo kiểm thời gian & độ chính xác KPI (CLO4)
+├── docker-compose.yml                # Docker Compose bao gồm Ingestor, NameNode, DataNode, Spark, Dashboard
 ├── Dockerfile                        # Đóng gói container chạy ngầm
-├── requirements.txt                  # Thư viện phụ thuộc (PySpark, Satpy, Requests, v.v.)
-└── run_daemon.bat                    # Kịch bản khởi chạy 1 chạm có Himawari-9 trên Windows
+├── requirements.txt                  # Thư viện phụ thuộc (PySpark, Satpy, Streamlit, v.v.)
+├── run_daemon.bat                    # Kịch bản khởi chạy 1 chạm có Himawari-9 trên Windows
+└── run_dashboard.bat                 # Kịch bản khởi chạy 1 chạm Dashboard Streamlit trên Windows
 ```
