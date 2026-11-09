@@ -128,3 +128,4 @@ def apply_priority_rules(snapshot_df: DataFrame) -> DataFrame:
     )
 
     return with_top
+

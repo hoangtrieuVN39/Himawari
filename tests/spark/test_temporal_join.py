@@ -48,3 +48,4 @@ def test_point_in_time_no_future_leakage_and_3_airport_spine(spark: SparkSession
     vvdn = [r for r in rows if r.airport_icao == "VVDN"][0]
     assert vvdn.has_precip_or_thunder_at_station is True
     assert "-RA" in vvdn.station_weather_codes
+

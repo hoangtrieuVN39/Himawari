@@ -10,3 +10,4 @@ def test_spark_session_utc_and_basic_dataframe(spark: SparkSession):
     assert df.count() == 3
     airports = [row.airport_icao for row in df.collect()]
     assert airports == ["VVDN", "VVNB", "VVTS"]
+

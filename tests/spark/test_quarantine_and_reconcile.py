@@ -56,3 +56,4 @@ def test_comprehensive_reconciliation_report(spark: SparkSession):
     assert rep["all_sources_reconciled"] is True
     assert len(rep["sources"]) == 3
     assert "binary_file_errors" in rep
+

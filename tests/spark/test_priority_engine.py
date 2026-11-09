@@ -89,3 +89,4 @@ def test_real_replay_scenario_0800_co_priority_top_tie(spark: SparkSession):
     # Order-independent accepted list contains both
     assert by_icao["VVDN"].accepted_first_review_airports == ["VVDN", "VVNB"]
     assert by_icao["VVNB"].accepted_first_review_airports == ["VVDN", "VVNB"]
+

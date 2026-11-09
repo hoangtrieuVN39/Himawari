@@ -29,3 +29,4 @@ def test_pipeline_end_to_end_and_idempotency(spark: SparkSession):
     assert res2["status"] == "SUCCESS"
     assert res2["decision_rows_count"] == 6
     assert res2["all_sources_reconciled"] is True
+

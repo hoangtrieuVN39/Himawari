@@ -56,3 +56,4 @@ def test_corrupt_json_envelope_captured(spark: SparkSession, tmp_path):
     df = read_raw_metar(spark, str(bad_file))
     corrupt_rows = df.filter(df._corrupt_record.isNotNull()).count()
     assert corrupt_rows >= 1
+

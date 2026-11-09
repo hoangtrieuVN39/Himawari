@@ -50,3 +50,4 @@ def test_parse_statute_miles_fallback():
     assert res["visibility_m"] == 4023
     assert res["visibility_capped_9999"] is False
     assert res["is_low_visibility"] is True
+

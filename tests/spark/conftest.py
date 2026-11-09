@@ -11,3 +11,4 @@ def spark() -> SparkSession:
     spark_session = get_spark_session("PySparkAirportTests", master="local[2]")
     yield spark_session
     stop_spark_session()
+
