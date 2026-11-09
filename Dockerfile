@@ -6,6 +6,7 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
+ENV MPLBACKEND=Agg
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -14,3 +15,4 @@ COPY config/ ./config/
 COPY src/ ./src/
 
 CMD ["python", "-m", "src.ingestion.run_ingest", "--loop"]
+

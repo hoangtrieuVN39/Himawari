@@ -1,3 +1,11 @@
 requests>=2.31.0
 pytest>=8.0.0
 pytest-mock>=3.14.0
+satpy>=0.48.0
+pyresample>=1.28.0
+numpy>=1.26.0
+xarray>=2024.1.0
+matplotlib>=3.8.0
+dask>=2024.1.0
+
+

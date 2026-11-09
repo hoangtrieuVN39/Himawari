@@ -48,3 +48,13 @@ def test_load_airports_config_missing_field(tmp_path):
 
     with pytest.raises(ValueError, match="Missing required field"):
         load_airports_config(str(cfg_file))
+
+def test_load_airports_config_has_satellite_fields():
+    cfg = load_airports_config("config/airports.json")
+    assert cfg["VVDN"]["himawari_segment"] == "S0410"
+    assert cfg["VVNB"]["himawari_segment"] == "S0410"
+    assert cfg["VVTS"]["himawari_segment"] == "S0510"
+    assert cfg["VVDN"]["outer_half_deg"] == 1.0
+    assert cfg["VVDN"]["inner_half_deg"] == 0.25
+
+

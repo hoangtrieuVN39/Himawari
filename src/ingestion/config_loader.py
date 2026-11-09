@@ -21,7 +21,11 @@ def load_airports_config(config_path: str = "config/airports.json") -> Dict[str,
         missing = REQUIRED_AIRPORT_FIELDS - set(item.keys())
         if missing:
             raise ValueError(f"Missing required field(s) {missing} in airport record: {item}")
+        item.setdefault("himawari_segment", "S0410" if float(item["latitude"]) >= 12.0 else "S0510")
+        item.setdefault("outer_half_deg", 1.0)
+        item.setdefault("inner_half_deg", 0.25)
         icao = item["icao"].upper()
         config_by_icao[icao] = item
 
     return config_by_icao
+
