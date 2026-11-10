@@ -494,3 +494,27 @@ def test_replay_load_is_fast(isolated_data):
 
     assert slots
     assert elapsed < 1.0, f"load_decision_slots took {elapsed:.2f}s"
+
+def test_sync_reads_each_source_once_regardless_of_slot_count(tmp_path: Path):
+    """Recomputing N live slots must scan raw envelopes once per source, not N times."""
+    from src.ingestion.raw_store import RawEnvelopeStore
+
+    base_dir = _setup_test_env(tmp_path / "data")
+    for minute in (1, 11, 21, 31, 41, 51):
+        _write_basic_metar(base_dir, batch=f"metar_08{minute:02d}", fetched=f"2026-11-10T08:{minute:02d}:00Z")
+
+    calls = []
+    original = RawEnvelopeStore.iter_envelopes
+
+    def spy(self, source, *args, **kwargs):
+        calls.append(source)
+        return original(self, source, *args, **kwargs)
+
+    with mock.patch.object(RawEnvelopeStore, "iter_envelopes", spy):
+        synced = sync_latest_raw_to_decision_table(str(base_dir), force_latest=True)
+
+    assert len(synced) == 6
+    # exactly one scan per source, shared by slot discovery and every slot computation
+    assert calls.count("metar") == 1
+    assert calls.count("open_meteo") == 1
+    assert calls.count("himawari_metrics") == 1

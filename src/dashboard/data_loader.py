@@ -73,9 +73,26 @@ def _classify_b13_cloud(rec: dict[str, Any]) -> tuple[str, str]:
     return ("WARM_OR_CLEAR_CLOUD", "Mây tầng thấp hoặc trời ít mây")
 
 
-def _compute_slot_rows_from_raw(storage_root: str, slot_utc_iso: str) -> list[dict[str, Any]]:
-    """Build the 3 airport decision rows for slot_utc_iso from raw envelopes (identical to PySpark rules)."""
-    root = Path(storage_root)
+def _load_raw_envelopes(storage_root: str) -> dict[str, list[dict[str, Any]]]:
+    """Reads every raw envelope of the active layout once, so many slots can be computed without rescanning."""
+    store = RawEnvelopeStore(storage_root=storage_root)
+    return {
+        source: list(store.iter_envelopes(source, strict=False))
+        for source in ("metar", "open_meteo", "himawari_metrics")
+    }
+
+
+def _compute_slot_rows_from_raw(
+    storage_root: str,
+    slot_utc_iso: str,
+    envelopes: dict[str, list[dict[str, Any]]] | None = None,
+) -> list[dict[str, Any]]:
+    """Build the 3 airport decision rows for slot_utc_iso from raw envelopes (identical to PySpark rules).
+
+    Pass `envelopes` (from _load_raw_envelopes) when computing several slots to avoid rescanning disk.
+    """
+    if envelopes is None:
+        envelopes = _load_raw_envelopes(storage_root)
     slot_dt = _parse_utc_dt(slot_utc_iso)
     if slot_dt is None:
         return []
@@ -83,11 +100,9 @@ def _compute_slot_rows_from_raw(storage_root: str, slot_utc_iso: str) -> list[di
     target_fc_dt = slot_dt.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
     target_fc_str = target_fc_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    store = RawEnvelopeStore(storage_root=storage_root)
-
     # 1. Scan valid METAR records <= slot_dt
     metar_candidates: dict[str, list[dict[str, Any]]] = {ap: [] for ap in VALID_AIRPORTS}
-    for env in store.iter_envelopes("metar", strict=False):
+    for env in envelopes["metar"]:
         meta = env.get("metadata") or {}
         fetched_dt = _parse_utc_dt(meta.get("fetched_at_utc"))
         is_backfill = bool(meta.get("is_backfill", False))
@@ -120,7 +135,7 @@ def _compute_slot_rows_from_raw(storage_root: str, slot_utc_iso: str) -> list[di
 
     # 2. Scan valid Open-Meteo records for target_fc_dt with fetched_at <= slot_dt
     fc_candidates: dict[str, list[dict[str, Any]]] = {ap: [] for ap in VALID_AIRPORTS}
-    for env in store.iter_envelopes("open_meteo", strict=False):
+    for env in envelopes["open_meteo"]:
         meta = env.get("metadata") or {}
         icao = meta.get("airport_icao")
         if icao not in fc_candidates:
@@ -156,7 +171,7 @@ def _compute_slot_rows_from_raw(storage_root: str, slot_utc_iso: str) -> list[di
 
     # 3. Scan valid Himawari B13 metrics <= slot_dt
     hima_candidates: dict[str, list[dict[str, Any]]] = {ap: [] for ap in VALID_AIRPORTS}
-    for env in store.iter_envelopes("himawari_metrics", strict=False):
+    for env in envelopes["himawari_metrics"]:
         meta = env.get("metadata") or {}
         if meta.get("is_synthetic_test"):
             continue
@@ -344,10 +359,10 @@ def _sync_locked(root: Path, dec_path: Path, storage_root: str, force_latest: bo
     ):
         return []
 
-    # Discover all live non-backfill slots from raw METAR envelopes via store
-    store = RawEnvelopeStore(storage_root=storage_root)
+    # Read every raw envelope once; reused for slot discovery and for all slot computations.
+    envelopes = _load_raw_envelopes(storage_root)
     discovered_slots: set[str] = set()
-    for env in store.iter_envelopes("metar", strict=False):
+    for env in envelopes["metar"]:
         meta = env.get("metadata") or {}
         if meta.get("is_backfill"):
             continue
@@ -383,7 +398,7 @@ def _sync_locked(root: Path, dec_path: Path, storage_root: str, force_latest: bo
     slots_to_compute = sorted(discovered_slots)
 
     for slot_iso in slots_to_compute:
-        new_rows = _compute_slot_rows_from_raw(storage_root, slot_iso)
+        new_rows = _compute_slot_rows_from_raw(storage_root, slot_iso, envelopes)
         if len(new_rows) == len(VALID_AIRPORTS):
             existing_by_slot[slot_iso] = new_rows
 
