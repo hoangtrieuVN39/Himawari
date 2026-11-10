@@ -96,8 +96,10 @@ def _run_app_with_session(session_state_dict: dict, submit_clicked: bool = False
             return submit_clicked
         return any(token in label for token in clicked_labels)
 
+    # The KPI form lives in a lazily-rendered tab; these tests exercise it as if that tab were selected.
     with mock.patch("streamlit.set_page_config"), \
          mock.patch("streamlit.rerun"), \
+         mock.patch("src.dashboard.app._tab_active", return_value=True), \
          mock.patch("streamlit.button", side_effect=fake_button), \
          mock.patch("streamlit.warning", mock_warning), \
          mock.patch("src.dashboard.app.load_decision_slots", return_value=mock_slots), \
