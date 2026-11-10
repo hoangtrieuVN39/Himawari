@@ -23,16 +23,25 @@ REASON_OPTIONS: dict[str, str] = {
 
 def derive_expected_reason_code(airport_row: dict[str, Any]) -> str:
     """Determine expected canonical reason code based on data flags."""
+    metar_present = airport_row.get("metar_is_present", True)
+    metar_age = airport_row.get("metar_age_minutes")
+    has_freshness_field = "metar_is_present" in airport_row or "metar_age_minutes" in airport_row
+    is_stale_or_missing = (not metar_present) or (metar_age is not None and metar_age > 60.0)
+
+    # When freshness fields are specified, stale or missing METAR takes precedence over weather flags
+    if has_freshness_field and is_stale_or_missing:
+        return "STALE_OR_MISSING_METAR"
+
+    # Fresh METAR hazard flags
     if airport_row.get("has_precip_or_thunder_at_station"):
         return "PRECIP_OR_THUNDER_AT_STATION"
     if airport_row.get("is_low_visibility") or (
         airport_row.get("visibility_m") is not None and airport_row.get("visibility_m") < 5000
     ):
         return "LOW_VISIBILITY"
-    if (not airport_row.get("metar_is_present", True)) or (
-        airport_row.get("metar_age_minutes") is not None and airport_row.get("metar_age_minutes") > 60.0
-    ):
+    if is_stale_or_missing:
         return "STALE_OR_MISSING_METAR"
+
     forecast_rain = airport_row.get("forecast_rain_next_hour_mm")
     if forecast_rain is not None and forecast_rain >= 0.1:
         return "FORECAST_RAIN_NEXT_HOUR"
@@ -42,9 +51,11 @@ def derive_expected_reason_code(airport_row: dict[str, Any]) -> str:
 def matches_observation_time(entered_str: str, airport_row: dict[str, Any]) -> bool:
     """Check if entered observation time matches expected UTC or Vietnam time (ICT).
     
-    Accepts:
-        - UTC formats: "07:00Z", "0700Z", "090700Z", "07:00", "7:00"
-        - VN formats: "14:00", "14h00", "14h", "14"
+    Strictly respects explicit timezone suffixes:
+        - "Z" or "UTC" suffixes ONLY match UTC observation time.
+        - "ICT" or "VN" suffixes ONLY match Vietnam (UTC+7) observation time.
+        - Suffix-less time strings accept either UTC or ICT time.
+        - 6-digit METAR code (DDHHMM[Z]) must strictly match day, hour, and minute in UTC.
     """
     if not entered_str or not isinstance(entered_str, str):
         return False
@@ -70,48 +81,67 @@ def matches_observation_time(entered_str: str, airport_row: dict[str, Any]) -> b
     utc_h, utc_m = [int(x) for x in utc_clean.split(":")]
     vn_h, vn_m = [int(x) for x in vn_hhmm.split(":")]
 
-    # Direct literal matches
-    if s == utc_hhmm or s == utc_clean:
-        return True
-    if s == vn_hhmm:
-        return True
-    if ddhhmmz and (s == ddhhmmz or s == ddhhmmz.rstrip("Z")):
-        return True
+    expected_day: int | None = None
+    if ddhhmmz and len(ddhhmmz) >= 6 and ddhhmmz[:2].isdigit():
+        expected_day = int(ddhhmmz[:2])
 
-    # 1. HH:MM with optional Z/UTC/ICT (e.g., "7:00", "07:00", "07:00Z", "14:00")
-    m_colon = re.match(r"^(\d{1,2}):(\d{2})\s*(?:Z|UTC|ICT)?$", s)
-    if m_colon:
-        h, m = int(m_colon.group(1)), int(m_colon.group(2))
-        if (h == utc_h and m == utc_m) or (h == vn_h and m == vn_m):
-            return True
+    def _match_time_and_tz(h: int, m: int, tz_suffix: str | None) -> bool:
+        if not (0 <= h <= 23 and 0 <= m <= 59):
+            return False
+        if tz_suffix in ("Z", "UTC"):
+            return h == utc_h and m == utc_m
+        if tz_suffix in ("ICT", "VN"):
+            return h == vn_h and m == vn_m
+        return (h == utc_h and m == utc_m) or (h == vn_h and m == vn_m)
 
-    # 2. 6-digit METAR DDHHMM or DDHHMMZ (e.g., "090700Z", "090700")
-    m_ddhhmm = re.match(r"^\d{2}(\d{2})(\d{2})\s*Z?$", s)
+    # 1. 6-digit METAR code: DDHHMM or DDHHMMZ (explicitly UTC)
+    m_ddhhmm = re.match(r"^(\d{2})(\d{2})(\d{2})\s*(Z|UTC)?$", s)
     if m_ddhhmm:
-        h, m = int(m_ddhhmm.group(1)), int(m_ddhhmm.group(2))
-        if (h == utc_h and m == utc_m) or (h == vn_h and m == vn_m):
-            return True
+        d = int(m_ddhhmm.group(1))
+        h = int(m_ddhhmm.group(2))
+        m = int(m_ddhhmm.group(3))
+        if not (1 <= d <= 31 and 0 <= h <= 23 and 0 <= m <= 59):
+            return False
+        if expected_day is not None and d != expected_day:
+            return False
+        return h == utc_h and m == utc_m
 
-    # 3. 4-digit HHMM or HHMMZ (e.g., "0700Z", "0700", "1400")
-    m_4digit = re.match(r"^(\d{2})(\d{2})\s*Z?$", s)
+    # 2. HH:MM with optional suffix (e.g., "07:00Z", "07:00 UTC", "14:00 ICT", "14h00 VN", "07:00", "7:00")
+    m_colon = re.match(r"^(\d{1,2}):(\d{2})\s*(Z|UTC|ICT|VN)?$", s)
+    if m_colon:
+        h = int(m_colon.group(1))
+        m = int(m_colon.group(2))
+        tz_suffix = m_colon.group(3)
+        return _match_time_and_tz(h, m, tz_suffix)
+
+    # 3. 4-digit HHMM with optional suffix (e.g., "0700Z", "0700 UTC", "1400", "1400 ICT")
+    m_4digit = re.match(r"^(\d{2})(\d{2})\s*(Z|UTC|ICT|VN)?$", s)
     if m_4digit:
-        h, m = int(m_4digit.group(1)), int(m_4digit.group(2))
-        if (h == utc_h and m == utc_m) or (h == vn_h and m == vn_m):
-            return True
+        h = int(m_4digit.group(1))
+        m = int(m_4digit.group(2))
+        tz_suffix = m_4digit.group(3)
+        return _match_time_and_tz(h, m, tz_suffix)
 
-    # 4. H format with minutes (e.g., "14h00", "14H00", "7h00")
-    m_h_min = re.match(r"^(\d{1,2})H(\d{2})\s*(?:ICT|VN)?$", s)
+    # 4. H format with minutes (e.g., "14h00", "14H00 VN", "7h00 ICT")
+    m_h_min = re.match(r"^(\d{1,2})H(\d{2})\s*(Z|UTC|ICT|VN)?$", s)
     if m_h_min:
-        h, m = int(m_h_min.group(1)), int(m_h_min.group(2))
-        if (h == utc_h and m == utc_m) or (h == vn_h and m == vn_m):
-            return True
+        h = int(m_h_min.group(1))
+        m = int(m_h_min.group(2))
+        tz_suffix = m_h_min.group(3)
+        return _match_time_and_tz(h, m, tz_suffix)
 
-    # 5. Hour only (e.g., "14h", "14", "7h", "7") -> matches if minute is 0
-    m_hour_only = re.match(r"^(\d{1,2})\s*(?:H|GIỜ)?\s*(?:ICT|VN)?$", s)
+    # 5. Hour only (e.g., "14h", "14H VN", "14", "7h", "7h00") -> minute must be 0
+    m_hour_only = re.match(r"^(\d{1,2})\s*H?\s*(Z|UTC|ICT|VN)?$", s)
     if m_hour_only:
         h = int(m_hour_only.group(1))
-        if (utc_m == 0 and h == utc_h) or (vn_m == 0 and h == vn_h):
-            return True
+        tz_suffix = m_hour_only.group(2)
+        if not (0 <= h <= 23):
+            return False
+        if tz_suffix in ("Z", "UTC"):
+            return utc_m == 0 and h == utc_h
+        if tz_suffix in ("ICT", "VN"):
+            return vn_m == 0 and h == vn_h
+        return (utc_m == 0 and h == utc_h) or (vn_m == 0 and h == vn_h)
 
     return False
 
@@ -176,7 +206,11 @@ def evaluate_kpi_submission(
         failure_messages.append(f"Không tìm thấy dữ liệu cho sân bay {selected_airport}")
     else:
         matches_reason = (selected_reason_code == expected_reason_code)
-        if not matches_reason and selected_row.get("has_precip_or_thunder_at_station") and (
+        metar_present = selected_row.get("metar_is_present", True)
+        metar_age = selected_row.get("metar_age_minutes")
+        is_fresh = metar_present and (metar_age is None or metar_age <= 60.0)
+
+        if not matches_reason and is_fresh and selected_row.get("has_precip_or_thunder_at_station") and (
             selected_row.get("is_low_visibility")
             or (selected_row.get("visibility_m") is not None and selected_row.get("visibility_m") < 5000)
         ):

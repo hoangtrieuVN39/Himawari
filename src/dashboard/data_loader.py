@@ -10,9 +10,14 @@ import subprocess
 import sys
 from typing import Any
 
+import portalocker
+
 from src.spark.transforms import parse_metar_raw_ob
+from src.ingestion.fs_utils import atomic_write_bytes
+from src.ingestion.raw_store import RawEnvelopeStore
 
 VALID_AIRPORTS = ["VVDN", "VVNB", "VVTS"]
+INGESTION_TIMEOUT_SEC = 180
 
 
 def _parse_utc_dt(ts_str: str | None) -> datetime | None:
@@ -77,13 +82,11 @@ def _compute_slot_rows_from_raw(storage_root: str, slot_utc_iso: str) -> list[di
     target_fc_dt = slot_dt.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
     target_fc_str = target_fc_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
+    store = RawEnvelopeStore(storage_root=storage_root)
+
     # 1. Scan valid METAR records <= slot_dt
     metar_candidates: dict[str, list[dict[str, Any]]] = {ap: [] for ap in VALID_AIRPORTS}
-    for m_file in sorted((root / "raw" / "metar").glob("date=*/*.json")):
-        try:
-            env = json.loads(m_file.read_text(encoding="utf-8"))
-        except Exception:
-            continue
+    for env in store.iter_envelopes("metar", strict=False):
         meta = env.get("metadata") or {}
         fetched_dt = _parse_utc_dt(meta.get("fetched_at_utc"))
         is_backfill = bool(meta.get("is_backfill", False))
@@ -116,11 +119,7 @@ def _compute_slot_rows_from_raw(storage_root: str, slot_utc_iso: str) -> list[di
 
     # 2. Scan valid Open-Meteo records for target_fc_dt with fetched_at <= slot_dt
     fc_candidates: dict[str, list[dict[str, Any]]] = {ap: [] for ap in VALID_AIRPORTS}
-    for f_file in sorted((root / "raw" / "open_meteo").glob("date=*/*.json")):
-        try:
-            env = json.loads(f_file.read_text(encoding="utf-8"))
-        except Exception:
-            continue
+    for env in store.iter_envelopes("open_meteo", strict=False):
         meta = env.get("metadata") or {}
         icao = meta.get("airport_icao")
         if icao not in fc_candidates:
@@ -156,11 +155,7 @@ def _compute_slot_rows_from_raw(storage_root: str, slot_utc_iso: str) -> list[di
 
     # 3. Scan valid Himawari B13 metrics <= slot_dt
     hima_candidates: dict[str, list[dict[str, Any]]] = {ap: [] for ap in VALID_AIRPORTS}
-    for h_file in sorted((root / "raw" / "himawari_metrics").glob("date=*/*.json")):
-        try:
-            env = json.loads(h_file.read_text(encoding="utf-8"))
-        except Exception:
-            continue
+    for env in store.iter_envelopes("himawari_metrics", strict=False):
         meta = env.get("metadata") or {}
         if meta.get("is_synthetic_test"):
             continue
@@ -185,7 +180,7 @@ def _compute_slot_rows_from_raw(storage_root: str, slot_utc_iso: str) -> list[di
                 "png_rel_path": ap_item.get("png_rel_path"),
                 "b13_valid_fraction": float(vf),
                 "inner_bt_min_k": float(bt_k),
-                "inner_bt_min_c": float(ap_item.get("inner_bt_min_c")),
+                "inner_bt_min_c": float(ap_item["inner_bt_min_c"]) if ap_item.get("inner_bt_min_c") is not None else round(float(bt_k) - 273.15, 2),
                 "inner_cold_cloud_fraction": float(ap_item.get("inner_cold_cloud_fraction") or 0.0),
                 "inner_severe_convection_fraction": float(ap_item.get("inner_severe_convection_fraction") or 0.0),
                 "b13_cloud_tag": tag,
@@ -329,32 +324,67 @@ def _compute_slot_rows_from_raw(storage_root: str, slot_utc_iso: str) -> list[di
     return rows
 
 
+# Internal signature cache for sync_latest_raw_to_decision_table:
+# Key: resolved storage_root Path string -> {"input_sig": tuple, "dec_sig": tuple}
+_SYNC_CACHE: dict[str, dict[str, Any]] = {}
+
+
+def _raw_input_signature(storage_root: str) -> tuple[tuple[str, int, int], ...]:
+    """Computes a sorted deterministic signature of active raw input files and state marker."""
+    return RawEnvelopeStore(storage_root=storage_root).signature()
+
+
 def sync_latest_raw_to_decision_table(
     storage_root: str = "data",
     force_latest: bool = False,
 ) -> list[str]:
     """Ensure all live non-backfill raw METAR batches in storage_root are reflected in decision_table.jsonl."""
     root = Path(storage_root)
-    metar_dir = root / "raw" / "metar"
     dec_path = root / "processed" / "decision_table" / "decision_table.jsonl"
-    if not metar_dir.exists() or not dec_path.exists():
+    if not dec_path.exists():
         return []
 
-    # Discover all live non-backfill slots from raw METAR envelopes
+    # Serialize writers (other Streamlit sessions / pipeline) on the decision table.
+    locks_dir = root / ".storage-locks"
+    locks_dir.mkdir(parents=True, exist_ok=True)
+    with portalocker.Lock(str(locks_dir / "decision_table.lock"), timeout=30.0):
+        return _sync_locked(root, dec_path, storage_root, force_latest)
+
+
+def _sync_locked(root: Path, dec_path: Path, storage_root: str, force_latest: bool) -> list[str]:
+    """Body of sync_latest_raw_to_decision_table; caller holds the decision-table lock."""
+    cache_key = str(root.resolve())
+    current_input_sig = _raw_input_signature(storage_root)
+
+    current_dec_sig = (dec_path.stat().st_size, dec_path.stat().st_mtime_ns)
+
+    cached = _SYNC_CACHE.get(cache_key)
+    if (
+        not force_latest
+        and cached is not None
+        and cached.get("input_sig") == current_input_sig
+        and cached.get("dec_sig") == current_dec_sig
+    ):
+        return []
+
+    # Discover all live non-backfill slots from raw METAR envelopes via store
+    store = RawEnvelopeStore(storage_root=storage_root)
     discovered_slots: set[str] = set()
-    for m_file in sorted(metar_dir.glob("date=*/*.json")):
-        try:
-            meta = (json.loads(m_file.read_text(encoding="utf-8"))).get("metadata") or {}
-            if meta.get("is_backfill"):
-                continue
-            fetched_dt = _parse_utc_dt(meta.get("fetched_at_utc"))
-            if fetched_dt:
-                slot_dt = _round_up_5min_utc(fetched_dt)
-                discovered_slots.add(slot_dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
-        except Exception:
+    for env in store.iter_envelopes("metar", strict=False):
+        meta = env.get("metadata") or {}
+        if meta.get("is_backfill"):
             continue
+        fetched_dt = _parse_utc_dt(meta.get("fetched_at_utc"))
+        if fetched_dt:
+            slot_dt = _round_up_5min_utc(fetched_dt)
+            discovered_slots.add(slot_dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
 
     if not discovered_slots:
+        # Update cache if decision table exists but no live slots discovered
+        _SYNC_CACHE[cache_key] = {
+            "input_sig": current_input_sig,
+            "dec_sig": current_dec_sig,
+        }
         return []
 
     # Load existing rows keyed by (normalized_slot_utc, airport_icao)
@@ -371,24 +401,33 @@ def sync_latest_raw_to_decision_table(
             except Exception:
                 continue
 
-    latest_discovered = max(discovered_slots)
-    slots_to_compute = [
-        s for s in sorted(discovered_slots)
-        if s not in existing_by_slot or (force_latest and s == latest_discovered)
-    ]
-    if not slots_to_compute:
-        return []
+    # When signature changed, recompute all discovered slots (including older ones)
+    # so that any late forecast or metric updates them, while preserving historical replay slots.
+    slots_to_compute = sorted(discovered_slots)
 
     for slot_iso in slots_to_compute:
         new_rows = _compute_slot_rows_from_raw(storage_root, slot_iso)
         if len(new_rows) == len(VALID_AIRPORTS):
             existing_by_slot[slot_iso] = new_rows
 
-    # Write back all slots in chronological order
-    with open(dec_path, "w", encoding="utf-8") as f:
-        for slot_iso in sorted(existing_by_slot.keys()):
-            for r in existing_by_slot[slot_iso]:
-                f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    # Atomic write back (unique temp file + fsync + replace)
+    payload = "".join(
+        json.dumps(r, ensure_ascii=False) + "\n"
+        for slot_iso in sorted(existing_by_slot.keys())
+        for r in existing_by_slot[slot_iso]
+    )
+    atomic_write_bytes(dec_path, payload.encode("utf-8"))
+
+    # Re-verify that raw input didn't mutate during computation before setting cache
+    post_input_sig = _raw_input_signature(storage_root)
+    if post_input_sig == current_input_sig:
+        new_dec_st = dec_path.stat()
+        _SYNC_CACHE[cache_key] = {
+            "input_sig": current_input_sig,
+            "dec_sig": (new_dec_st.st_size, new_dec_st.st_mtime_ns),
+        }
+    else:
+        _SYNC_CACHE.pop(cache_key, None)
 
     return slots_to_compute
 
@@ -403,20 +442,29 @@ def fetch_and_update_realtime(
         "-m",
         "src.ingestion.run_ingest",
         "--once",
-        "--storage-root",
+        "--base-dir",
         storage_root,
     ]
     if include_himawari:
         cmd.append("--include-himawari")
 
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=INGESTION_TIMEOUT_SEC)
+    except subprocess.TimeoutExpired:
+        return {"status": "ERROR", "error": f"Ingestion timeout after {INGESTION_TIMEOUT_SEC}s"}
+    except OSError as exc:
+        return {"status": "ERROR", "error": f"Could not start ingestion: {exc}"}
+
     if proc.returncode != 0:
         return {
             "status": "ERROR",
             "error": (proc.stderr or proc.stdout or "Unknown ingestion error")[:500],
         }
 
-    synced_slots = sync_latest_raw_to_decision_table(storage_root=storage_root, force_latest=True)
+    try:
+        synced_slots = sync_latest_raw_to_decision_table(storage_root=storage_root, force_latest=True)
+    except Exception as exc:
+        return {"status": "ERROR", "error": f"Decision table sync failed: {exc}"}
     slots = load_decision_slots(storage_root)
     latest_slot = max(slots.keys()) if slots else None
     return {
@@ -499,14 +547,13 @@ def normalize_timestamp_pair(ts_str: str | None, raw_ob: str | None = None) -> d
 
 def load_decision_slots(storage_root: str = "data") -> dict[str, list[dict[str, Any]]]:
     """Load decision table from decision_table.jsonl and group by normalized UTC slot.
-    
-    Automatically syncs any newer non-backfill raw METAR/Open-Meteo/Himawari batches on disk
-    into decision_table.jsonl before loading.
-    
+
+    Read-only: never modifies disk. Call sync_latest_raw_to_decision_table() first to fold
+    newer non-backfill raw batches into decision_table.jsonl.
+
     Returns:
         dict[utc_iso, list[row_dict]] where utc_iso is e.g. "2026-11-09T07:00:00Z"
     """
-    sync_latest_raw_to_decision_table(storage_root)
     path = Path(storage_root) / "processed" / "decision_table" / "decision_table.jsonl"
     if not path.exists():
         return {}

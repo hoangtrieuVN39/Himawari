@@ -24,6 +24,7 @@ from src.dashboard.data_loader import (
     load_audit_and_reconciliation,
     load_decision_slots,
     sort_slot_rows,
+    sync_latest_raw_to_decision_table,
 )
 from src.dashboard.kpi_evaluator import (
     REASON_OPTIONS,
@@ -32,6 +33,8 @@ from src.dashboard.kpi_evaluator import (
     evaluate_kpi_submission,
     load_kpi_trials,
 )
+
+STORAGE_ROOT = "data"
 
 AIRPORT_NAMES: dict[str, str] = {
     "VVDN": "Đà Nẵng (VVDN)",
@@ -46,6 +49,13 @@ SORT_OPTIONS: dict[str, str] = {
 }
 
 
+def _format_metar_age(age_minutes: float | None) -> str:
+    """Safely formats METAR age in minutes, returning 'N/A' for missing/None values."""
+    if age_minutes is None:
+        return "N/A"
+    return f"{int(round(float(age_minutes)))} phút"
+
+
 def init_session_state() -> None:
     """Initialize necessary Streamlit session state keys."""
     if "timer_state" not in st.session_state:
@@ -54,6 +64,8 @@ def init_session_state() -> None:
         st.session_state["timer_start"] = 0.0
     if "timer_elapsed" not in st.session_state:
         st.session_state["timer_elapsed"] = 0.0
+    if "timer_has_started" not in st.session_state:
+        st.session_state["timer_has_started"] = False
     if "last_kpi_result" not in st.session_state:
         st.session_state["last_kpi_result"] = None
     if "participant_id" not in st.session_state:
@@ -74,7 +86,12 @@ def main() -> None:
     st.sidebar.caption("Đồ án Big Data · Mô-đun 4 · 3 Sân bay: VVDN, VVNB, VVTS")
     st.sidebar.markdown("---")
 
-    storage_root = "data"
+    storage_root = STORAGE_ROOT
+    # Explicit, cached (signature-based) sync of newly ingested raw batches; reads below are read-only.
+    try:
+        sync_latest_raw_to_decision_table(storage_root)
+    except Exception as exc:
+        st.sidebar.warning(f"⚠️ Không đồng bộ được mốc mới nhất từ dữ liệu thô: {exc}")
     slots = load_decision_slots(storage_root)
 
     if not slots:
@@ -246,7 +263,7 @@ def main() -> None:
                     "Tên sân bay": name,
                     "Lý do phân loại": r.get("reason_vi", ""),
                     "Giờ quan trắc": f"{r.get('obs_utc_hhmm', '')} ({r.get('obs_vn_hhmm', '')} ICT)",
-                    "Tuổi METAR": f"{int(r.get('metar_age_minutes', 0))} phút",
+                    "Tuổi METAR": _format_metar_age(r.get("metar_age_minutes")),
                     "Tầm nhìn": vis_str,
                     "Mưa giờ tới (Dự báo)": rain_str,
                     "Mây B13 (Vệ tinh)": f"{b13_summary} (BT min: {bt_str})",
@@ -279,7 +296,7 @@ def main() -> None:
                 c1, c2 = st.columns(2)
                 with c1:
                     st.metric("Giờ quan trắc", f"{drill_row.get('obs_utc_hhmm')} ({drill_row.get('obs_vn_hhmm')} ICT)")
-                    st.metric("Tuổi dữ liệu", f"{drill_row.get('metar_age_minutes', 0):.0f} phút")
+                    st.metric("Tuổi dữ liệu", _format_metar_age(drill_row.get("metar_age_minutes")))
                     st.write(f"**Thời tiết tại trạm:** `{drill_row.get('station_weather_codes') or 'None'}`")
                 with c2:
                     st.metric("Tầm nhìn", f"{drill_row.get('visibility_m', 'N/A')} m")
@@ -427,15 +444,16 @@ def main() -> None:
         with t_col1:
             if st.button("🟢 Bắt đầu nhận ca", use_container_width=True):
                 st.session_state["timer_state"] = "running"
-                st.session_state["timer_start"] = time.time()
+                st.session_state["timer_start"] = time.perf_counter()
                 st.session_state["timer_elapsed"] = 0.0
+                st.session_state["timer_has_started"] = True
                 st.rerun()
 
         with t_col2:
             if st.button("⏹️ Dừng & Ghi nhận", use_container_width=True):
                 if st.session_state["timer_state"] == "running":
                     st.session_state["timer_state"] = "stopped"
-                    st.session_state["timer_elapsed"] = round(time.time() - st.session_state["timer_start"], 1)
+                    st.session_state["timer_elapsed"] = round(max(0.0, time.perf_counter() - st.session_state["timer_start"]), 1)
                     st.rerun()
 
         with t_col3:
@@ -443,13 +461,14 @@ def main() -> None:
                 st.session_state["timer_state"] = "idle"
                 st.session_state["timer_start"] = 0.0
                 st.session_state["timer_elapsed"] = 0.0
+                st.session_state["timer_has_started"] = False
                 st.session_state["last_kpi_result"] = None
                 st.rerun()
 
         with t_col4:
             current_elapsed = st.session_state["timer_elapsed"]
             if st.session_state["timer_state"] == "running":
-                current_elapsed = round(time.time() - st.session_state["timer_start"], 1)
+                current_elapsed = round(max(0.0, time.perf_counter() - st.session_state["timer_start"]), 1)
             st.metric("Thời gian nhận ca (giây)", f"{current_elapsed:.1f} s", delta=st.session_state["timer_state"])
 
         # Submission Form
@@ -476,36 +495,45 @@ def main() -> None:
             submit_trial = st.button("🚀 Nộp Kết Quả & Chấm Điểm", use_container_width=True)
 
         if submit_trial:
-            final_elapsed = current_elapsed if current_elapsed > 0 else 45.0
-            eval_res = evaluate_kpi_submission(
-                slot_rows=sorted_rows,
-                selected_airport=selected_airport,
-                selected_reason_code=selected_reason_code,
-                entered_obs_time=entered_obs_time,
-                elapsed_seconds=final_elapsed,
-                status="COMPLETED",
-            )
+            if not st.session_state.get("timer_has_started", False):
+                st.warning("⚠️ Vui lòng bấm '🟢 Bắt đầu nhận ca' trước khi nộp kết quả rà soát.")
+            else:
+                if st.session_state["timer_state"] == "running":
+                    final_elapsed = round(max(0.0, time.perf_counter() - st.session_state["timer_start"]), 1)
+                    st.session_state["timer_state"] = "stopped"
+                    st.session_state["timer_elapsed"] = final_elapsed
+                else:
+                    final_elapsed = st.session_state["timer_elapsed"]
 
-            # Record trial to jsonl
-            trial_record = {
-                "participant_id": participant_id,
-                "case_id": selected_slot,
-                "view_mode": view_mode_code,
-                "trial_order": trial_order,
-                "selected_airport": selected_airport,
-                "selected_reason_code": selected_reason_code,
-                "entered_obs_time": entered_obs_time,
-                "elapsed_seconds": final_elapsed,
-                "status": "COMPLETED",
-                "is_passed": eval_res["is_passed"],
-                "failure_codes": eval_res["failure_codes"],
-                "failure_message_vi": eval_res["failure_message_vi"],
-                "is_sample_seed": False,
-            }
-            append_kpi_trial(trial_record)
-            st.session_state["last_kpi_result"] = eval_res
-            st.session_state["timer_state"] = "stopped"
-            st.session_state["timer_elapsed"] = final_elapsed
+                eval_res = evaluate_kpi_submission(
+                    slot_rows=sorted_rows,
+                    selected_airport=selected_airport,
+                    selected_reason_code=selected_reason_code,
+                    entered_obs_time=entered_obs_time,
+                    elapsed_seconds=final_elapsed,
+                    status="COMPLETED",
+                )
+
+                # Record trial to jsonl
+                trial_record = {
+                    "participant_id": participant_id,
+                    "case_id": selected_slot,
+                    "view_mode": view_mode_code,
+                    "trial_order": trial_order,
+                    "selected_airport": selected_airport,
+                    "selected_reason_code": selected_reason_code,
+                    "entered_obs_time": entered_obs_time,
+                    "elapsed_seconds": final_elapsed,
+                    "status": "COMPLETED",
+                    "is_passed": eval_res["is_passed"],
+                    "failure_codes": eval_res["failure_codes"],
+                    "failure_message_vi": eval_res["failure_message_vi"],
+                    "is_sample_seed": False,
+                }
+                append_kpi_trial(trial_record)
+                st.session_state["last_kpi_result"] = eval_res
+                # Re-arm: a new trial needs a fresh "Bắt đầu nhận ca" (prevents duplicate records)
+                st.session_state["timer_has_started"] = False
 
         # Display result banner if available
         if st.session_state["last_kpi_result"]:

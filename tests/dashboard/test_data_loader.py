@@ -20,8 +20,8 @@ def test_normalize_timestamp_pair_recovers_utc_from_raw_ob():
     assert info["metar_ddhhmmz"] == "090700Z"
 
 
-def test_load_decision_slots_and_sort_modes_preserve_co_priority():
-    slots = load_decision_slots("data")
+def test_load_decision_slots_and_sort_modes_preserve_co_priority(isolated_data):
+    slots = load_decision_slots(str(isolated_data))
     assert "2026-11-09T07:00:00Z" in slots
     assert "2026-11-09T08:00:00Z" in slots
     assert "2026-11-09T16:45:00Z" in slots
@@ -46,16 +46,16 @@ def test_load_decision_slots_and_sort_modes_preserve_co_priority():
         assert r["accepted_first_review_airports"] == ["VVDN", "VVNB"]
 
 
-def test_get_b13_image_sequence_no_future_leakage():
-    seq = get_b13_image_sequence("data", "VVDN", "2026-11-09T07:30:00Z", max_frames=6)
+def test_get_b13_image_sequence_no_future_leakage(isolated_data):
+    seq = get_b13_image_sequence(str(isolated_data), "VVDN", "2026-11-09T07:30:00Z", max_frames=6)
     assert 1 <= len(seq) <= 6
     assert seq[-1]["utc_hhmm"] == "07:30Z"
     for item in seq:
         assert item["utc_hhmm"] <= "07:30Z"
 
 
-def test_load_audit_and_reconciliation_returns_all_sections():
-    audit = load_audit_and_reconciliation("data")
+def test_load_audit_and_reconciliation_returns_all_sections(isolated_data):
+    audit = load_audit_and_reconciliation(str(isolated_data))
     assert audit["reconciliation"]["all_sources_reconciled"] is True
     assert len(audit["binary_file_errors"]) >= 1
     assert audit["ingestion_summary"]["total_logs"] >= 1
