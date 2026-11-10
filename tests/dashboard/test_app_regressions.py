@@ -92,10 +92,19 @@ def _run_app_with_session(session_state_dict: dict, submit_clicked: bool = False
     mock_rows = _create_mock_slot_rows([])
     mock_slots = {"2026-11-09T07:00:00Z": mock_rows}
 
-    def fake_button(label, *args, **kwargs):
-        if "Nộp & chấm điểm" in label:
-            return submit_clicked
-        return any(token in label for token in clicked_labels)
+    import uuid
+    from src.dashboard.views import kpi as kpi_view
+
+    clicks = {"Bắt đầu": "start", "Dừng": "stop", "Đặt lại": "reset"}
+
+    def fake_trial_controls(mode, key, **data):
+        """Stands in for the browser component: returns the action a click would have triggered."""
+        if mode == "timer":
+            for token, kind in clicks.items():
+                if any(token in label for label in clicked_labels):
+                    return {"type": kind, "nonce": str(uuid.uuid4()), "client_ts": 1_000_000}
+            return None
+        return {"type": "submit", "nonce": str(uuid.uuid4()), "client_ts": 1_012_500} if submit_clicked else None
 
     # A complete answer is filled in (bare-mode widgets would otherwise return their empty default);
     # these tests are about the timer lifecycle, not grading.
@@ -115,7 +124,8 @@ def _run_app_with_session(session_state_dict: dict, submit_clicked: bool = False
          mock.patch("streamlit.selectbox", side_effect=_answer(real_selectbox)), \
          mock.patch("streamlit.rerun"), \
          mock.patch("src.dashboard.app._tab_active", return_value=True), \
-         mock.patch("streamlit.button", side_effect=fake_button), \
+         mock.patch("src.dashboard.views.kpi.trial_controls", side_effect=fake_trial_controls), \
+         mock.patch("src.dashboard.views.kpi._submission_form", kpi_view._submission_form_impl), \
          mock.patch("streamlit.warning", mock_warning), \
          mock.patch("src.dashboard.app.load_decision_slots", return_value=mock_slots), \
          mock.patch("src.dashboard.app.load_audit_and_reconciliation", return_value={
@@ -127,7 +137,7 @@ def _run_app_with_session(session_state_dict: dict, submit_clicked: bool = False
          mock.patch("src.dashboard.app.load_kpi_trials", return_value=[]), \
          mock.patch("src.dashboard.app.append_kpi_trial", mock_append):
 
-        for k, v in session_state_dict.items():
+        for k, v in {**answers, **session_state_dict}.items():
             st.session_state[k] = v
 
         app.main()

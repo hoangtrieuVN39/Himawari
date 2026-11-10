@@ -10,13 +10,14 @@ import pandas as pd
 import streamlit as st
 
 from src.dashboard import components as c
+from src.dashboard.kpi_trial_component import trial_controls
 from src.dashboard.views import (
     KPI_VIEW_DEFAULT,
     KPI_VIEW_MODE_KEY,
-    TRIAL_VIEW_MODE_KEY,
     ViewContext,
     active_trial_view_mode,
 )
+from src.dashboard.views.kpi_state import NOT_STARTED_MSG, SubmitData, apply_trial_action  # noqa: F401 - re-exported
 
 VIEW_LABELS = {"baseline_3_sources": "Baseline: 3 nguồn rời", "dashboard": "Dashboard tổng hợp"}
 
@@ -27,8 +28,6 @@ REASON_LABELS: dict[str, str] = {
     "FORECAST_RAIN_NEXT_HOUR": "Dự báo mưa giờ tới (≥ 0.1 mm/h)",
     "ROUTINE": "Bình thường",
 }
-
-NOT_STARTED_MSG = "Chưa bắt đầu lượt thử. Hãy bấm “Bắt đầu nhận ca” trước khi nộp."
 
 
 def interpret_obs_time(text: str | None) -> str | None:
@@ -116,42 +115,73 @@ def _clear_answers() -> None:
     st.session_state["kpi_obs_time"] = ""
 
 
-def _timer_block(view_mode: str) -> None:
-    st.html('<div class="card-title">Bấm giờ</div>')
-    running = st.session_state["timer_state"] == "running"
+def _answers() -> dict[str, Any]:
+    return {k: st.session_state.get(k) for k in ("kpi_airport", "kpi_reason", "kpi_obs_time")}
 
-    @st.fragment(run_every=1.0 if running else None)
-    def _clock() -> None:
-        st.html(c.timer_display(st.session_state["timer_state"], _elapsed_now()))
 
-    _clock()
-
-    if st.button("Bắt đầu nhận ca", width="stretch", type="primary"):
-        st.session_state["timer_state"] = "running"
-        st.session_state["timer_start"] = time.perf_counter()
-        st.session_state["timer_elapsed"] = 0.0
-        st.session_state["timer_has_started"] = True
-        st.session_state["last_kpi_result"] = None
-        st.session_state[TRIAL_VIEW_MODE_KEY] = view_mode
+def _handle(ctx: ViewContext, action: dict[str, Any] | None, view_mode: str) -> None:
+    """Applies a trial action from the browser component; records the trial on a valid submit."""
+    if not action:
+        return
+    out = apply_trial_action(st.session_state, action, now=time.perf_counter(), view_mode=view_mode, answers=_answers())
+    if not out.handled:
+        return
+    if out.warning:
+        st.warning(out.warning)
+    if out.submit:
+        _record(ctx, out.submit)
+    if out.clear_answers:
         _clear_answers()
-        st.rerun()
-    b2, b3 = st.columns(2)
-    with b2:
-        if st.button("Dừng & ghi nhận", width="stretch"):
-            if st.session_state["timer_state"] == "running":
-                st.session_state["timer_state"] = "stopped"
-                st.session_state["timer_elapsed"] = round(max(0.0, time.perf_counter() - st.session_state["timer_start"]), 1)
-                st.rerun()
-    with b3:
-        if st.button("Đặt lại", width="stretch"):
-            st.session_state["timer_state"] = "idle"
-            st.session_state["timer_start"] = 0.0
-            st.session_state["timer_elapsed"] = 0.0
-            st.session_state["timer_has_started"] = False
-            st.session_state["last_kpi_result"] = None
-            st.session_state.pop(TRIAL_VIEW_MODE_KEY, None)
-            _clear_answers()
-            st.rerun()
+    if out.rerun_app:
+        st.rerun(scope="app")
+
+
+def _record(ctx: ViewContext, sub: SubmitData) -> None:
+    eval_res = ctx.deps["evaluate_kpi_submission"](
+        slot_rows=ctx.rows,
+        selected_airport=sub.airport,
+        selected_reason_code=sub.reason,
+        entered_obs_time=sub.obs_time,
+        elapsed_seconds=sub.server_elapsed,
+        status="COMPLETED",
+    )
+    ctx.deps["append_kpi_trial"]({
+        "participant_id": st.session_state["participant_id"],
+        "case_id": ctx.selected_slot,
+        "view_mode": sub.view_mode,
+        "trial_order": st.session_state.get("kpi_trial_order") or 1,
+        "selected_airport": sub.airport,
+        "selected_reason_code": sub.reason,
+        "entered_obs_time": sub.obs_time,
+        "elapsed_seconds": sub.server_elapsed,
+        "client_elapsed_seconds": sub.client_elapsed,
+        "status": "COMPLETED",
+        "is_passed": eval_res["is_passed"],
+        "failure_codes": eval_res["failure_codes"],
+        "failure_message_vi": eval_res["failure_message_vi"],
+        "is_sample_seed": False,
+    })
+    st.session_state["last_kpi_result"] = {
+        **eval_res,
+        "elapsed_seconds": sub.server_elapsed,
+        "client_elapsed_seconds": sub.client_elapsed,
+        "selected_airport": sub.airport,
+        "selected_reason_code": sub.reason,
+        "entered_obs_time": sub.obs_time,
+    }
+
+
+def _timer_block(ctx: ViewContext, view_mode: str) -> None:
+    st.html('<div class="card-title">Bấm giờ</div>')
+    # The clock ticks in the browser; the server reruns only when a button is clicked.
+    action = trial_controls(
+        "timer",
+        key="kpi_trial_timer",
+        state=st.session_state["timer_state"],
+        server_elapsed=_elapsed_now(),
+        client_t0=st.session_state.get("client_t0"),
+    )
+    _handle(ctx, action, view_mode)
     st.caption("Đồng hồ chạy liên tục trên màn hình. Nộp bài sẽ tự dừng; lượt sau cần bấm “Bắt đầu nhận ca” lại.")
 
 
@@ -190,25 +220,25 @@ def _result_banner() -> None:
     )
 
 
-def _submission_form(ctx: ViewContext, view_mode: str) -> None:
+def _submission_form_impl(ctx: ViewContext, view_mode: str) -> None:
     st.html('<div class="card-title">Phiếu nộp kết quả</div>')
     f1, f2 = st.columns(2)
     with f1:
         participant_id = st.text_input("Mã người thử", value=st.session_state["participant_id"])
         st.session_state["participant_id"] = participant_id
     with f2:
-        trial_order = st.segmented_control(
+        st.segmented_control(
             "Thứ tự lượt thử", options=[1, 2], default=1, key="kpi_trial_order", format_func=lambda n: f"Lượt {n}",
-        ) or 1
+        )
 
     airports = ["VVDN", "VVNB", "VVTS"]
-    selected_airport = st.segmented_control(
+    st.segmented_control(
         "Sân bay cần rà soát đầu tiên",
         options=airports,
         key="kpi_airport",
         format_func=lambda code: f"{code} · {c.AIRPORT_SHORT_NAMES.get(code, code)}",
     )
-    selected_reason = st.selectbox(
+    st.selectbox(
         "Lý do căn cứ",
         options=[None, *REASON_LABELS.keys()],
         format_func=lambda k: "— Chọn lý do —" if k is None else REASON_LABELS[k],
@@ -226,59 +256,13 @@ def _submission_form(ctx: ViewContext, view_mode: str) -> None:
     if not st.session_state.get("timer_has_started", False):
         st.caption("Phải bấm “Bắt đầu nhận ca” trước khi nộp")
 
-    if not st.button("Nộp & chấm điểm", width="stretch", type="primary"):
-        return
-    if not st.session_state.get("timer_has_started", False):
-        st.warning(NOT_STARTED_MSG)
-        return
-    if not selected_airport:
-        st.warning("Chọn sân bay cần rà soát đầu tiên trước khi nộp.")
-        return
-    if not selected_reason:
-        st.warning("Chọn lý do căn cứ trước khi nộp.")
-        return
+    action = trial_controls("submit", key="kpi_trial_submit")
+    _handle(ctx, action, view_mode)
 
-    if st.session_state["timer_state"] == "running":
-        final_elapsed = round(max(0.0, time.perf_counter() - st.session_state["timer_start"]), 1)
-        st.session_state["timer_state"] = "stopped"
-        st.session_state["timer_elapsed"] = final_elapsed
-    else:
-        final_elapsed = st.session_state["timer_elapsed"]
 
-    eval_res = ctx.deps["evaluate_kpi_submission"](
-        slot_rows=ctx.rows,
-        selected_airport=selected_airport,
-        selected_reason_code=selected_reason,
-        entered_obs_time=entered_obs_time,
-        elapsed_seconds=final_elapsed,
-        status="COMPLETED",
-    )
-    ctx.deps["append_kpi_trial"]({
-        "participant_id": participant_id,
-        "case_id": ctx.selected_slot,
-        "view_mode": view_mode,
-        "trial_order": trial_order,
-        "selected_airport": selected_airport,
-        "selected_reason_code": selected_reason,
-        "entered_obs_time": entered_obs_time,
-        "elapsed_seconds": final_elapsed,
-        "status": "COMPLETED",
-        "is_passed": eval_res["is_passed"],
-        "failure_codes": eval_res["failure_codes"],
-        "failure_message_vi": eval_res["failure_message_vi"],
-        "is_sample_seed": False,
-    })
-    st.session_state["last_kpi_result"] = {
-        **eval_res,
-        "elapsed_seconds": final_elapsed,
-        "selected_airport": selected_airport,
-        "selected_reason_code": selected_reason,
-        "entered_obs_time": entered_obs_time,
-    }
-    # Re-arm: a new trial needs a fresh "Bắt đầu nhận ca" (prevents duplicate records)
-    st.session_state["timer_has_started"] = False
-    st.session_state.pop(TRIAL_VIEW_MODE_KEY, None)
-    st.rerun()  # full rerun so the clock fragment stops ticking and the mode switch unlocks
+# A fragment: picking answers / typing the time reruns only the form, not the page.
+# (Tests call _submission_form_impl directly: fragment bodies do not run outside `streamlit run`.)
+_submission_form = st.fragment(_submission_form_impl)
 
 
 def render_kpi(ctx: ViewContext) -> None:
@@ -309,7 +293,7 @@ def render_kpi(ctx: ViewContext) -> None:
 
     left, right = st.columns([1, 1.6], gap="medium")
     with left, st.container(border=True):
-        _timer_block(view_mode)
+        _timer_block(ctx, view_mode)
     with right, st.container(border=True):
         _submission_form(ctx, view_mode)
     _result_banner()
