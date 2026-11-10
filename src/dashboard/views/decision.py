@@ -1,0 +1,154 @@
+"""Tab "Quyết định": decision banner, 3-airport table and the provenance drill-down."""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any
+
+import streamlit as st
+
+from src.dashboard import components as c
+from src.dashboard.data_loader import normalize_timestamp_pair
+from src.dashboard.metar_decoder import decode_metar, explain_priority
+from src.dashboard.views import ViewContext, baseline_trial_in_progress
+
+DRILL_KEY = "drill_icao"
+
+
+def _default_airport(rows: list[dict[str, Any]]) -> str:
+    accepted = rows[0].get("accepted_first_review_airports") or []
+    return accepted[0] if accepted else rows[0].get("airport_icao")
+
+
+def _resolve_png(path: str | None, storage_root: str) -> Path | None:
+    if not path:
+        return None
+    p = Path(path)
+    for cand in (p, Path(storage_root) / p):
+        if cand.exists():
+            return cand
+    return None
+
+
+def _scan_within_window(scan_iso: str | None, slot_iso: str, minutes: int = 60) -> bool:
+    if not scan_iso:
+        return False
+    try:
+        scan = datetime.fromisoformat(normalize_timestamp_pair(scan_iso)["utc_iso"].replace("Z", "+00:00"))
+        slot = datetime.fromisoformat(normalize_timestamp_pair(slot_iso)["utc_iso"].replace("Z", "+00:00"))
+    except (ValueError, KeyError, TypeError):
+        return False
+    return slot - timedelta(minutes=minutes) <= scan <= slot
+
+
+def _satellite(ctx: ViewContext, row: dict[str, Any]) -> None:
+    icao = row.get("airport_icao", "")
+    seq = ctx.deps["get_b13_image_sequence"](ctx.storage_root, icao, ctx.selected_slot, max_frames=6) or []
+    with st.container(border=True):
+        sub = f"{len(seq)} khung · 10 phút/khung" if len(seq) > 1 else ("1 ảnh" if seq else "Chưa có ảnh")
+        st.html(
+            '<div class="card-head"><div class="card-title">Vệ tinh Himawari-9 · kênh B13</div>'
+            f'<div class="card-sub">{c._e(sub)} · IR 10.4 µm</div></div>'
+        )
+        frame = None
+        if len(seq) > 1:
+            frame = st.select_slider(
+                "Khung thời gian",
+                options=seq,
+                value=seq[-1],
+                format_func=lambda s: f"{s['utc_hhmm']} ({s['vn_hhmm']} ICT)",
+                key=f"b13_slider_{icao}_{ctx.selected_slot}",
+            )
+            idx = seq.index(frame) + 1
+            st.caption(f"Khung {idx}/{len(seq)} · {frame['utc_hhmm']}")
+        elif seq:
+            frame = seq[-1]
+
+        img_path = None
+        wanted = None
+        stale_scan = None
+        if frame:
+            wanted = frame["png_path"]
+            img_path = _resolve_png(wanted, ctx.storage_root)
+        elif row.get("latest_b13_png_path"):
+            # Only fall back to the row's latest image when it is inside the same 60-minute window.
+            if _scan_within_window(row.get("latest_b13_scan_time_utc"), ctx.selected_slot):
+                wanted = row["latest_b13_png_path"]
+                img_path = _resolve_png(wanted, ctx.storage_root)
+            else:
+                stale_scan = row.get("latest_b13_scan_time_utc")
+
+        if stale_scan:
+            info = normalize_timestamp_pair(stale_scan)
+            st.html(
+                '<div class="sat-empty"><strong>Không có ảnh trong 60 phút trước mốc</strong>'
+                f'<span>Ảnh gần nhất lúc <span class="mono">{c._e(info["utc_hhmm"])} · {c._e(stale_scan[:10])}</span> — đã cũ, không hiển thị.</span>'
+                "<span>Chỉ số mây bên dưới lấy từ lần quét gần nhất đó.</span></div>"
+            )
+        elif img_path is not None:
+            when = f"{frame['utc_hhmm']} · {frame['vn_hhmm']} ICT" if frame else ""
+            st.image(str(img_path), caption=f"{icao} {when}".strip(), width="stretch")
+        elif wanted:
+            st.html(
+                '<div class="sat-empty"><strong>Không tìm thấy tệp ảnh</strong>'
+                f'<span class="mono">{c._e(Path(wanted).name)}</span>'
+                "<span>File bị mất — xem Tab Đối soát dữ liệu để kiểm tra lỗi tệp.</span></div>"
+            )
+        else:
+            st.html('<div class="sat-empty"><strong>Không có ảnh</strong><span>Chưa có ảnh vệ tinh cho sân bay này ở mốc đang chọn.</span></div>')
+
+        st.html(c.b13_metrics(row) + c.attribution())
+
+
+def render_decision(ctx: ViewContext) -> None:
+    if baseline_trial_in_progress(st.session_state):
+        st.html(c.baseline_lock_notice())
+        return
+
+    rows = ctx.rows
+    if not rows:
+        st.warning("**Chưa có dữ liệu cho mốc này.** Bấm “Cập nhật dữ liệu realtime” hoặc chọn chế độ Phát lại.")
+        return
+
+    st.html(c.decision_banner(rows))
+
+    icaos = [r.get("airport_icao") for r in rows]
+    current = st.session_state.get(DRILL_KEY)
+    selected = current if current in icaos else _default_airport(rows)
+
+    st.html(c.section_header(
+        "Tổng hợp 3 sân bay",
+        f"Sắp xếp: {ctx.sort_label} · chọn sân bay ở mục Truy nguyên để xem bằng chứng",
+        c.level_legend(),
+    ))
+    st.html(c.airport_table(rows, selected_icao=selected))
+
+    st.html(c.section_header("Truy nguyên bằng chứng", "Dữ liệu gốc từ 3 nguồn cho sân bay đang chọn"))
+    levels = {r.get("airport_icao"): r.get("priority_level") for r in rows}
+    if current not in icaos:
+        st.session_state[DRILL_KEY] = selected
+    picked = st.segmented_control(
+        "Sân bay đang xem",
+        options=icaos,
+        key=DRILL_KEY,
+        format_func=lambda code: f"{code} · M{levels.get(code, '-')}",
+        label_visibility="collapsed",
+    )
+    drill_icao = picked or selected
+    row = next((r for r in rows if r.get("airport_icao") == drill_icao), rows[0])
+
+    left, right = st.columns([1.15, 1], gap="medium")
+    with left:
+        groups = decode_metar(row.get("raw_ob"), row.get("airport_icao"))
+        st.html(c.metar_card(row, groups))
+        if row.get("raw_ob"):
+            with st.expander("Sao chép bản tin gốc"):
+                st.code(row["raw_ob"], language="text")
+        st.html(c.why_block(explain_priority(row)))
+        if groups:
+            with st.expander(f"Giải mã từng nhóm ({len(groups)})"):
+                st.html(c.decode_list(groups))
+        st.html(c.forecast_card(row))
+    with right:
+        _satellite(ctx, row)

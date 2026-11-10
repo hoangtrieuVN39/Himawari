@@ -12,6 +12,7 @@ from typing import Optional, Sequence
 
 METAR_STALE_MINUTES = 60.0
 FORECAST_RAIN_ALERT_MM = 0.1
+LOW_VISIBILITY_M = 5000  # same threshold as transforms.parse_metar_raw_ob (visibility_m < 5000)
 
 LABEL_LEVEL_1 = "LEVEL_1_HAZARD_AT_STATION"
 LABEL_LEVEL_2 = "LEVEL_2_DATA_VERIFICATION"

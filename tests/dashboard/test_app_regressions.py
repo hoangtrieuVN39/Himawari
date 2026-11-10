@@ -1,8 +1,9 @@
-﻿"""Regression tests for dashboard UI rendering, missing data handling, and timer lifecycle."""
+"""Regression tests for dashboard UI rendering, missing data handling, and timer lifecycle."""
 
 from unittest import mock
 import pytest
 from src.dashboard import app
+from src.dashboard.views.kpi import NOT_STARTED_MSG as NOT_STARTED
 
 
 def _create_mock_slot_rows(missing_indices: list[int] = [0]):
@@ -92,12 +93,26 @@ def _run_app_with_session(session_state_dict: dict, submit_clicked: bool = False
     mock_slots = {"2026-11-09T07:00:00Z": mock_rows}
 
     def fake_button(label, *args, **kwargs):
-        if "Nộp Kết Quả" in label:
+        if "Nộp & chấm điểm" in label:
             return submit_clicked
         return any(token in label for token in clicked_labels)
 
+    # A complete answer is filled in (bare-mode widgets would otherwise return their empty default);
+    # these tests are about the timer lifecycle, not grading.
+    answers = {"kpi_airport": "VVDN", "kpi_reason": "ROUTINE"}
+    real_segmented, real_selectbox = st.segmented_control, st.selectbox
+
+    def _answer(real):
+        def widget(label, *args, key=None, **kwargs):
+            if key in answers:
+                return answers[key]
+            return real(label, *args, key=key, **kwargs)
+        return widget
+
     # The KPI form lives in a lazily-rendered tab; these tests exercise it as if that tab were selected.
     with mock.patch("streamlit.set_page_config"), \
+         mock.patch("streamlit.segmented_control", side_effect=_answer(real_segmented)), \
+         mock.patch("streamlit.selectbox", side_effect=_answer(real_selectbox)), \
          mock.patch("streamlit.rerun"), \
          mock.patch("src.dashboard.app._tab_active", return_value=True), \
          mock.patch("streamlit.button", side_effect=fake_button), \
@@ -131,7 +146,7 @@ def test_submit_without_start_does_not_record_trial():
     }
     mock_append, mock_warning = _run_app_with_session(session, submit_clicked=True)
     assert not mock_append.called, "Must not append trial when timer was never started"
-    assert any("Vui lòng bấm '🟢 Bắt đầu nhận ca'" in str(c) for c in mock_warning.call_args_list)
+    assert any(NOT_STARTED in str(c) for c in mock_warning.call_args_list)
 
 
 def test_submit_after_reset_does_not_record_trial():
@@ -144,10 +159,10 @@ def test_submit_after_reset_does_not_record_trial():
         "last_kpi_result": None,
     }
     mock_append, mock_warning = _run_app_with_session(
-        session, submit_clicked=True, clicked_labels=("Đặt lại đồng hồ",)
+        session, submit_clicked=True, clicked_labels=("Đặt lại",)
     )
     assert not mock_append.called, "Must not append trial after timer was reset"
-    assert any("Vui lòng bấm '🟢 Bắt đầu nhận ca'" in str(c) for c in mock_warning.call_args_list)
+    assert any(NOT_STARTED in str(c) for c in mock_warning.call_args_list)
 
 
 def test_submit_with_started_timer_records_monotonic_duration():
@@ -168,7 +183,7 @@ def test_submit_with_started_timer_records_monotonic_duration():
     record = mock_append.call_args[0][0]
     assert record["elapsed_seconds"] == 12.5
     assert record["is_sample_seed"] is False
-    assert not any("Vui lòng bấm '🟢 Bắt đầu nhận ca'" in str(c) for c in mock_warning.call_args_list)
+    assert not any(NOT_STARTED in str(c) for c in mock_warning.call_args_list)
 
 
 def test_submit_after_stopped_timer_records_stopped_duration():
@@ -207,7 +222,7 @@ def test_second_submit_without_new_start_does_not_record_duplicate():
     # Same session (state persists), second click on Submit without pressing Start again
     mock_append2, mock_warning2 = _run_app_with_session({}, submit_clicked=True)
     assert not mock_append2.called
-    assert any("Vui lòng bấm '🟢 Bắt đầu nhận ca'" in str(c) for c in mock_warning2.call_args_list)
+    assert any(NOT_STARTED in str(c) for c in mock_warning2.call_args_list)
 
 def test_slot_hhmm_derives_labels_without_hardcoded_defaults():
     assert app._slot_hhmm("2026-11-10T08:05:00Z", None) == ("08:05Z", "15:05")
