@@ -12,6 +12,7 @@ from typing import Any
 
 import portalocker
 
+from src.spark.priority_rules import PriorityInput, evaluate_priority
 from src.spark.transforms import parse_metar_raw_ob
 from src.ingestion.fs_utils import atomic_write_bytes
 from src.ingestion.raw_store import RawEnvelopeStore
@@ -228,46 +229,22 @@ def _compute_slot_rows_from_raw(storage_root: str, slot_utc_iso: str) -> list[di
         fc_present = f_best is not None
         fc_rain = f_best["forecast_rain_next_hour_mm"] if f_best else None
 
-        # Priority Level 1-4 evaluation
-        is_l1 = (
-            metar_present
-            and metar_age is not None
-            and metar_age <= 60.0
-            and (parsed["has_precip_or_thunder_at_station"] or parsed["is_low_visibility"])
-        )
-        is_l2 = (not is_l1) and ((not metar_present) or (metar_age is not None and metar_age > 60.0))
-        is_l3 = (not is_l1) and (not is_l2) and fc_present and (fc_rain is not None and fc_rain >= 0.1)
-
-        if is_l1:
-            p_level = 1
-            p_label = "LEVEL_1_HAZARD_AT_STATION"
-            wx_str = ", ".join(parsed["station_weather_codes"])
-            vis_m = parsed["visibility_m"]
-            if parsed["has_precip_or_thunder_at_station"] and parsed["is_low_visibility"]:
-                reason_vi = f"METAR mới ({obs_hhmm}) ghi nhận mưa/dông tại trạm ({wx_str}) và tầm nhìn thấp {vis_m}m (< 5km)"
-            elif parsed["has_precip_or_thunder_at_station"]:
-                vis_txt = str(vis_m) if vis_m is not None else "không rõ"
-                reason_vi = f"METAR mới ({obs_hhmm}) ghi nhận mưa/dông tại trạm ({wx_str}), tầm nhìn {vis_txt}m"
-            else:
-                reason_vi = f"METAR mới ghi nhận tầm nhìn thấp {vis_m}m (< 5km)"
-        elif is_l2:
-            p_level = 2
-            p_label = "LEVEL_2_DATA_VERIFICATION"
-            if not metar_present:
-                reason_vi = "Cần xác minh dữ liệu: Thiếu bản tin quan trắc METAR"
-            else:
-                reason_vi = f"Cần xác minh dữ liệu: Bản tin METAR đã cũ {metar_age} phút (> 60 phút)"
-        elif is_l3:
-            p_level = 3
-            p_label = "LEVEL_3_FORECAST_RAIN_ALERT"
-            reason_vi = (
-                f"Điều kiện tại trạm tốt, nhưng dự báo mưa giờ tới đạt "
-                f"{round(float(fc_rain), 1)} mm (hiệu lực {target_fc_dt.strftime('%H:%MZ')})"
+        # Priority Level 1-4 evaluation (shared with the Spark engine's rules)
+        decision = evaluate_priority(
+            PriorityInput(
+                metar_is_present=metar_present,
+                metar_age_minutes=metar_age,
+                has_precip_or_thunder_at_station=parsed["has_precip_or_thunder_at_station"],
+                is_low_visibility=parsed["is_low_visibility"],
+                station_weather_codes=parsed["station_weather_codes"],
+                visibility_m=parsed["visibility_m"],
+                observed_hhmm=obs_hhmm,
+                forecast_is_present=fc_present,
+                forecast_rain_next_hour_mm=fc_rain,
+                target_forecast_hhmm=target_fc_dt.strftime("%H:%MZ"),
             )
-        else:
-            p_level = 4
-            p_label = "LEVEL_4_ROUTINE"
-            reason_vi = "Điều kiện tại trạm bình thường, không có cảnh báo mưa giờ tới"
+        )
+        p_level, p_label, reason_vi = decision.level, decision.label, decision.reason_vi
 
         rows.append({
             "review_slot_utc": slot_str,

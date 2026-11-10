@@ -3,12 +3,27 @@
 from pyspark.sql import DataFrame, Window
 from pyspark.sql import functions as F
 
+from src.spark.priority_rules import (
+    FORECAST_RAIN_ALERT_MM,
+    LABEL_LEVEL_1,
+    LABEL_LEVEL_2,
+    LABEL_LEVEL_3,
+    LABEL_LEVEL_4,
+    METAR_STALE_MINUTES,
+    REASON_LEVEL_2_MISSING,
+    REASON_LEVEL_4,
+)
+
 
 def apply_priority_rules(snapshot_df: DataFrame) -> DataFrame:
-    """Evaluates Level 1–4 priority rules, builds Vietnamese explanations, and flags co-priority top ties."""
+    """Evaluates Level 1–4 priority rules, builds Vietnamese explanations, and flags co-priority top ties.
+
+    Thresholds, labels and fixed reasons come from src.spark.priority_rules (shared with the dashboard);
+    tests/spark/test_priority_rules_parity.py keeps this Column implementation in sync with the Python one.
+    """
     is_level_1 = (
         (F.col("metar_is_present") == True)
-        & (F.col("metar_age_minutes") <= 60.0)
+        & (F.col("metar_age_minutes") <= METAR_STALE_MINUTES)
         & (
             (F.col("has_precip_or_thunder_at_station") == True)
             | (F.col("is_low_visibility") == True)
@@ -16,14 +31,14 @@ def apply_priority_rules(snapshot_df: DataFrame) -> DataFrame:
     )
 
     is_level_2 = (~is_level_1) & (
-        (F.col("metar_is_present") == False) | (F.col("metar_age_minutes") > 60.0)
+        (F.col("metar_is_present") == False) | (F.col("metar_age_minutes") > METAR_STALE_MINUTES)
     )
 
     is_level_3 = (
         (~is_level_1)
         & (~is_level_2)
         & (F.col("forecast_is_present") == True)
-        & (F.col("forecast_rain_next_hour_mm") >= 0.1)
+        & (F.col("forecast_rain_next_hour_mm") >= FORECAST_RAIN_ALERT_MM)
     )
 
     priority_level_col = (
@@ -34,10 +49,10 @@ def apply_priority_rules(snapshot_df: DataFrame) -> DataFrame:
     )
 
     priority_label_col = (
-        F.when(is_level_1, F.lit("LEVEL_1_HAZARD_AT_STATION"))
-        .when(is_level_2, F.lit("LEVEL_2_DATA_VERIFICATION"))
-        .when(is_level_3, F.lit("LEVEL_3_FORECAST_RAIN_ALERT"))
-        .otherwise(F.lit("LEVEL_4_ROUTINE"))
+        F.when(is_level_1, F.lit(LABEL_LEVEL_1))
+        .when(is_level_2, F.lit(LABEL_LEVEL_2))
+        .when(is_level_3, F.lit(LABEL_LEVEL_3))
+        .otherwise(F.lit(LABEL_LEVEL_4))
     )
 
     # Human-readable Vietnamese reason string
@@ -75,7 +90,7 @@ def apply_priority_rules(snapshot_df: DataFrame) -> DataFrame:
 
     reason_level_2 = F.when(
         F.col("metar_is_present") == False,
-        F.lit("Cần xác minh dữ liệu: Thiếu bản tin quan trắc METAR"),
+        F.lit(REASON_LEVEL_2_MISSING),
     ).otherwise(
         F.concat(
             F.lit("Cần xác minh dữ liệu: Bản tin METAR đã cũ "),
@@ -92,7 +107,7 @@ def apply_priority_rules(snapshot_df: DataFrame) -> DataFrame:
         F.lit(")"),
     )
 
-    reason_level_4 = F.lit("Điều kiện tại trạm bình thường, không có cảnh báo mưa giờ tới")
+    reason_level_4 = F.lit(REASON_LEVEL_4)
 
     reason_vi_col = (
         F.when(is_level_1, reason_level_1)
