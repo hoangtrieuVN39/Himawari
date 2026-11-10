@@ -31,12 +31,17 @@ def _resolve_paths(path: str | list[str]) -> list[str]:
     return [p.replace("\\", "/") for p in sorted(matched)]
 
 
-def read_raw_metar(spark: SparkSession, path: str | list[str]) -> DataFrame:
+def read_raw_metar(
+    spark: SparkSession,
+    path: str | list[str],
+    *,
+    multiline: bool = True,
+) -> DataFrame:
     """Reads raw METAR JSON envelopes and explodes payload into airport observation rows."""
     files = _resolve_paths(path)
     raw_df = (
         spark.read.schema(METAR_ENVELOPE_SCHEMA)
-        .option("multiLine", True)
+        .option("multiLine", multiline)
         .option("mode", "PERMISSIVE")
         .option("columnNameOfCorruptRecord", "_corrupt_record")
         .json(files)
@@ -81,12 +86,17 @@ def read_raw_metar(spark: SparkSession, path: str | list[str]) -> DataFrame:
     )
 
 
-def read_raw_open_meteo(spark: SparkSession, path: str | list[str]) -> DataFrame:
+def read_raw_open_meteo(
+    spark: SparkSession,
+    path: str | list[str],
+    *,
+    multiline: bool = True,
+) -> DataFrame:
     """Reads raw Open-Meteo JSON envelopes and explodes hourly forecast arrays."""
     files = _resolve_paths(path)
     raw_df = (
         spark.read.schema(OPEN_METEO_ENVELOPE_SCHEMA)
-        .option("multiLine", True)
+        .option("multiLine", multiline)
         .option("mode", "PERMISSIVE")
         .option("columnNameOfCorruptRecord", "_corrupt_record")
         .json(files)
@@ -134,12 +144,17 @@ def read_raw_open_meteo(spark: SparkSession, path: str | list[str]) -> DataFrame
     )
 
 
-def read_raw_himawari_metrics(spark: SparkSession, path: str | list[str]) -> DataFrame:
+def read_raw_himawari_metrics(
+    spark: SparkSession,
+    path: str | list[str],
+    *,
+    multiline: bool = True,
+) -> DataFrame:
     """Reads raw Himawari metrics JSON envelopes and explodes airport items."""
     files = _resolve_paths(path)
     raw_df = (
         spark.read.schema(HIMAWARI_METRICS_ENVELOPE_SCHEMA)
-        .option("multiLine", True)
+        .option("multiLine", multiline)
         .option("mode", "PERMISSIVE")
         .option("columnNameOfCorruptRecord", "_corrupt_record")
         .json(files)

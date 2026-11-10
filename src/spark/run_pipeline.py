@@ -3,11 +3,13 @@
 import argparse
 import json
 import sys
+import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import TimestampType
+from src.ingestion.raw_store import RawEnvelopeStore
 from src.spark.priority_engine import apply_priority_rules
 from src.spark.quarantine import (
     build_reconciliation_report,
@@ -27,28 +29,28 @@ from src.spark.transforms import enrich_valid_himawari, enrich_valid_metar
 
 
 def discover_latest_slot_utc(storage_root: str = "data") -> str | None:
-    """Finds the latest ingested METAR timestamp on disk and rounds up to a 5-min UTC slot."""
-    metar_root = Path(storage_root) / "raw" / "metar"
-    if not metar_root.exists():
-        return None
-    files = sorted(metar_root.glob("date=*/*.json"))
-    if not files:
-        return None
-    latest_file = files[-1]
+    """Finds the latest ingested METAR timestamp on disk via RawEnvelopeStore and rounds up to a 5-min UTC slot."""
     try:
-        data = json.loads(latest_file.read_text(encoding="utf-8"))
-        fetched_str = data.get("metadata", {}).get("fetched_at_utc")
-        if fetched_str:
-            dt = datetime.fromisoformat(fetched_str.replace("Z", "+00:00")).astimezone(timezone.utc)
-            # Round up to next 5-minute mark so all files from the cycle satisfy fetched_at <= slot
-            rem = dt.minute % 5
-            if rem != 0 or dt.second > 0:
-                dt = dt.replace(second=0, microsecond=0) + timedelta(minutes=(5 - rem))
+        store = RawEnvelopeStore(storage_root=storage_root)
+        latest_dt = None
+        for envelope in store.iter_envelopes("metar", strict=False):
+            fetched_str = envelope.get("metadata", {}).get("fetched_at_utc")
+            if fetched_str:
+                try:
+                    dt = datetime.fromisoformat(fetched_str.replace("Z", "+00:00")).astimezone(timezone.utc)
+                    if latest_dt is None or dt > latest_dt:
+                        latest_dt = dt
+                except Exception:
+                    pass
+        if latest_dt is not None:
+            rem = latest_dt.minute % 5
+            if rem != 0 or latest_dt.second > 0:
+                dt = latest_dt.replace(second=0, microsecond=0) + timedelta(minutes=(5 - rem))
             else:
-                dt = dt.replace(second=0, microsecond=0)
+                dt = latest_dt.replace(second=0, microsecond=0)
             return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     except Exception:
-        return None
+        pass
     return None
 
 
@@ -109,15 +111,52 @@ def run_spark_pipeline(
     if inject_quarantine_test:
         synthetic_info = inject_synthetic_quarantine_batch(f"{storage_root}/raw/synthetic_quarantine")
 
-    # 1. Read Raw JSON Envelopes
-    metar_path = f"{storage_root}/raw/metar/date=*/*.json"
-    forecast_path = f"{storage_root}/raw/open_meteo/date=*/*.json"
-    himawari_path = f"{storage_root}/raw/himawari_metrics/date=*/*.json"
+    # 1. Read Raw JSON/JSONL Envelopes from the ACTIVE layout only (never a legacy/compact union)
+    store = RawEnvelopeStore(storage_root=storage_root)
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp_dir:
+        empty_path = Path(tmp_dir) / "empty.jsonl"
+        empty_path.write_bytes(b"")  # zero-row input that keeps the reader's output schema
 
-    raw_metar_df = read_raw_metar(spark_session, metar_path)
-    raw_forecast_df = read_raw_open_meteo(spark_session, forecast_path)
-    raw_himawari_df = read_raw_himawari_metrics(spark_session, himawari_path)
+        raw_metar_df = _read_active_layout(spark_session, store, "metar", read_raw_metar, empty_path)
+        raw_forecast_df = _read_active_layout(spark_session, store, "open_meteo", read_raw_open_meteo, empty_path)
+        raw_himawari_df = _read_active_layout(
+            spark_session, store, "himawari_metrics", read_raw_himawari_metrics, empty_path
+        )
 
+        return _run_stages(
+            spark_session=spark_session,
+            storage_root=storage_root,
+            slots=slots,
+            mode=mode,
+            inject_quarantine_test=inject_quarantine_test,
+            synthetic_info=synthetic_info,
+            raw_metar_df=raw_metar_df,
+            raw_forecast_df=raw_forecast_df,
+            raw_himawari_df=raw_himawari_df,
+        )
+
+
+def _read_active_layout(spark_session, store: RawEnvelopeStore, source: str, reader, empty_path: Path):
+    """Reads one source from the store's active layout; an empty partition set yields an empty DataFrame."""
+    spec = store.read_specs(source)[0]
+    if not spec.paths:
+        return reader(spark_session, str(empty_path), multiline=False)
+    return reader(spark_session, list(spec.paths), multiline=spec.multiline)
+
+
+def _run_stages(
+    *,
+    spark_session,
+    storage_root: str,
+    slots: list[str],
+    mode: str,
+    inject_quarantine_test: bool,
+    synthetic_info,
+    raw_metar_df,
+    raw_forecast_df,
+    raw_himawari_df,
+) -> dict:
+    """Stages 2-6: validation, enrichment, temporal join, priority rules, and persistence."""
     # If synthetic batch injected, union synthetic records for quarantine verification
     if inject_quarantine_test and synthetic_info:
         synth_metar = read_raw_metar(spark_session, synthetic_info["metar_path"])
