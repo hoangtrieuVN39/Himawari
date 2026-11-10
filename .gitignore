@@ -20,3 +20,7 @@ data/**/.staging/
 data/raw_compact.staging/
 data/raw_compact.replaced-*/
 data/.sync-snapshot/
+
+# Local harness records and dummy data
+.harness/
+dummy_data/
