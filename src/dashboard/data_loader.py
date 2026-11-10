@@ -618,10 +618,13 @@ def get_b13_image_sequence(
     airport_icao: str,
     up_to_utc_iso: str,
     max_frames: int = 6,
+    window_minutes: int = 60,
 ) -> list[dict[str, str]]:
     """Scan and return up to max_frames B13 PNG images chronologically <= up_to_utc_iso.
     
-    Prevents future data leakage by strictly checking scan_time <= up_to_utc_iso.
+    Prevents future data leakage by strictly checking scan_time <= up_to_utc_iso, and only keeps
+    frames from the `window_minutes` before the slot (spec: the evolution leading up to the event),
+    so a slot never shows a stale frame from hours or days earlier.
     
     Returns:
         list of dict: [{"scan_time_utc": str, "utc_hhmm": str, "vn_hhmm": str, "png_path": str}]
@@ -632,6 +635,7 @@ def get_b13_image_sequence(
 
     norm_target = normalize_timestamp_pair(up_to_utc_iso)
     cutoff_dt = datetime.fromisoformat(norm_target["utc_iso"].replace("Z", "+00:00"))
+    window_start = cutoff_dt - timedelta(minutes=window_minutes)
 
     frames: list[dict[str, Any]] = []
     pattern = re.compile(r"B13_[A-Z0-9]+_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})Z\.png", re.IGNORECASE)
@@ -648,7 +652,7 @@ def get_b13_image_sequence(
         mm = int(match.group(5))
 
         dt_scan = datetime(year, month, day, hh, mm, 0, tzinfo=timezone.utc)
-        if dt_scan <= cutoff_dt:
+        if window_start <= dt_scan <= cutoff_dt:
             vn_dt = dt_scan + timedelta(hours=7)
             frames.append({
                 "_dt": dt_scan,

@@ -54,6 +54,21 @@ def test_get_b13_image_sequence_no_future_leakage(isolated_data):
         assert item["utc_hhmm"] <= "07:30Z"
 
 
+def test_get_b13_image_sequence_only_frames_within_60_minutes(tmp_path):
+    day_dir = tmp_path / "processed" / "himawari_png" / "airport=VVDN" / "date=2026-11-09"
+    day_dir.mkdir(parents=True)
+    for name in ("0700", "0750", "1620"):
+        (day_dir / f"B13_VVDN_20261109_{name}Z.png").write_bytes(b"")
+    next_day = tmp_path / "processed" / "himawari_png" / "airport=VVDN" / "date=2026-11-10"
+    next_day.mkdir(parents=True)
+    (next_day / "B13_VVDN_20261110_1530Z.png").write_bytes(b"")
+
+    seq = get_b13_image_sequence(str(tmp_path), "VVDN", "2026-11-10T15:45:00Z", max_frames=6)
+    assert [f["scan_time_utc"] for f in seq] == ["2026-11-10T15:30:00Z"]  # day-old frames are not "before the event"
+    seq_0800 = get_b13_image_sequence(str(tmp_path), "VVDN", "2026-11-09T08:00:00Z", max_frames=6)
+    assert [f["utc_hhmm"] for f in seq_0800] == ["07:00Z", "07:50Z"]  # 60-minute window is inclusive
+
+
 def test_load_audit_and_reconciliation_returns_all_sections(isolated_data):
     audit = load_audit_and_reconciliation(str(isolated_data))
     assert audit["reconciliation"]["all_sources_reconciled"] is True
