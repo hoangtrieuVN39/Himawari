@@ -11,5 +11,6 @@ pyspark>=3.5.0,<4.0.0
 pyarrow>=15.0.0
 pandas>=2.2.0
 streamlit>=1.32.0
+portalocker>=3.2,<5
 
 

@@ -11,3 +11,13 @@ Thumbs.db
 data/raw/himawari_hsd/**/*.DAT.bz2
 !data/raw/himawari_hsd/synthetic_test/*.DAT.bz2
 .superpowers/
+
+# Compact raw storage runtime files & locks
+data/.storage-locks/
+data/raw_compact/
+data/storage_state.json
+data/backups/
+data/**/.staging/
+data/raw_compact.staging/
+data/raw_compact.replaced-*/
+data/.sync-snapshot/
