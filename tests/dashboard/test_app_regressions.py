@@ -206,3 +206,8 @@ def test_second_submit_without_new_start_does_not_record_duplicate():
     mock_append2, mock_warning2 = _run_app_with_session({}, submit_clicked=True)
     assert not mock_append2.called
     assert any("Vui lòng bấm '🟢 Bắt đầu nhận ca'" in str(c) for c in mock_warning2.call_args_list)
+
+def test_slot_hhmm_derives_labels_without_hardcoded_defaults():
+    assert app._slot_hhmm("2026-11-10T08:05:00Z", None) == ("08:05Z", "15:05")
+    row = {"slot_utc_hhmm": "07:00Z", "slot_vn_hhmm": "14:00"}
+    assert app._slot_hhmm("2026-11-09T07:00:00Z", row) == ("07:00Z", "14:00")

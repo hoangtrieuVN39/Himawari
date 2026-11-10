@@ -23,9 +23,11 @@ from src.dashboard.data_loader import (
     get_b13_image_sequence,
     load_audit_and_reconciliation,
     load_decision_slots,
+    normalize_timestamp_pair,
     sort_slot_rows,
     sync_latest_raw_to_decision_table,
 )
+from src.spark.replay_slots import load_replay_slots
 from src.dashboard.kpi_evaluator import (
     REASON_OPTIONS,
     append_kpi_trial,
@@ -47,6 +49,14 @@ SORT_OPTIONS: dict[str, str] = {
     "Mã sân bay A → Z": "icao_asc",
     "Đảo thứ tự dòng Z → A (Kiểm thử đồng mức)": "icao_desc",
 }
+
+
+def _slot_hhmm(slot_key: str, row: dict | None) -> tuple[str, str]:
+    """UTC/ICT HH:MM labels for a slot: from the row if present, else derived from the slot timestamp."""
+    if row and row.get("slot_utc_hhmm") and row.get("slot_vn_hhmm"):
+        return row["slot_utc_hhmm"], row["slot_vn_hhmm"]
+    info = normalize_timestamp_pair(slot_key)
+    return info["utc_hhmm"], info["vn_hhmm"]
 
 
 def _format_metar_age(age_minutes: float | None) -> str:
@@ -96,7 +106,7 @@ def main() -> None:
 
     if not slots:
         st.sidebar.error("⚠️ Không tìm thấy bảng quyết định trong `data/processed/decision_table/`.")
-        available_slots = ["2026-11-09T07:00:00Z"]
+        available_slots = [load_replay_slots()[0]]
     else:
         available_slots = sorted(slots.keys())
 
@@ -107,7 +117,8 @@ def main() -> None:
         if slots and slot_key in slots and slots[slot_key]:
             first = slots[slot_key][0]
             badge = " 🟢 [LIVE MỚI NHẤT]" if slot_key == latest_slot_key and len(available_slots) > 2 else ""
-            return f"{first.get('slot_utc_hhmm', '07:00Z')} ({first.get('slot_vn_hhmm', '14:00')} ICT) — {slot_key[:10]}{badge}"
+            utc_hhmm, vn_hhmm = _slot_hhmm(slot_key, first)
+            return f"{utc_hhmm} ({vn_hhmm} ICT) — {slot_key[:10]}{badge}"
         return slot_key
 
     operating_mode = st.sidebar.radio(
@@ -197,9 +208,8 @@ def main() -> None:
     slot_rows = slots.get(selected_slot, [])
     sorted_rows = sort_slot_rows(slot_rows, sort_mode=sort_mode)
 
-    slot_utc_display = sorted_rows[0].get("slot_utc_hhmm", "07:00Z") if sorted_rows else "07:00Z"
-    slot_vn_display = sorted_rows[0].get("slot_vn_hhmm", "14:00") if sorted_rows else "14:00"
-    slot_date_display = selected_slot[:10] if selected_slot else "2026-11-09"
+    slot_utc_display, slot_vn_display = _slot_hhmm(selected_slot, sorted_rows[0] if sorted_rows else None)
+    slot_date_display = selected_slot[:10] if selected_slot else load_replay_slots()[0][:10]
     mode_badge = "🟢 LIVE REALTIME" if selected_slot == latest_slot_key and len(available_slots) > 2 else "⏪ REPLAY LỊCH SỬ"
 
     st.title("🛫 Hệ thống Hỗ trợ Điều phối viên Rà soát Thời tiết Sân bay")

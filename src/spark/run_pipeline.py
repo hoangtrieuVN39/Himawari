@@ -11,6 +11,7 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import TimestampType
 from src.ingestion.raw_store import RawEnvelopeStore
 from src.spark.priority_engine import apply_priority_rules
+from src.spark.replay_slots import load_replay_slots
 from src.spark.quarantine import (
     build_reconciliation_report,
     inject_synthetic_quarantine_batch,
@@ -104,7 +105,7 @@ def run_spark_pipeline(
     spark: SparkSession | None = None,
 ) -> dict:
     """Executes the full PySpark ETL pipeline."""
-    slots = review_slots or ["2026-11-09T07:00:00Z", "2026-11-09T08:00:00Z"]
+    slots = review_slots or load_replay_slots()
     spark_session = spark or get_spark_session("AirportWeatherReviewSparkPipeline")
 
     synthetic_info = None
@@ -239,21 +240,21 @@ def _run_stages(
     }
 
 
-def main():
-    args = parse_args()
-    raw_slots_arg = args.review_slots.strip()
-    if raw_slots_arg.lower() in ("auto", "latest"):
-        base_slots = [
-            "2026-11-09T07:00:00Z",
-            "2026-11-09T08:00:00Z",
-            "2026-11-09T11:00:00Z",
-        ]
-        latest = discover_latest_slot_utc(args.storage_root)
+def resolve_review_slots(review_slots_arg: str, storage_root: str) -> list[str]:
+    """'auto'/'latest' -> configured replay slots + latest live slot; otherwise an explicit comma list."""
+    arg = review_slots_arg.strip()
+    if arg.lower() in ("auto", "latest"):
+        base_slots = load_replay_slots()
+        latest = discover_latest_slot_utc(storage_root)
         if latest and latest not in base_slots:
             base_slots.append(latest)
-        slots = sorted(base_slots)
-    else:
-        slots = [s.strip() for s in raw_slots_arg.split(",") if s.strip()]
+        return sorted(base_slots)
+    return [s.strip() for s in arg.split(",") if s.strip()]
+
+
+def main():
+    args = parse_args()
+    slots = resolve_review_slots(args.review_slots, args.storage_root)
     result = run_spark_pipeline(
         storage_root=args.storage_root,
         review_slots=slots,
