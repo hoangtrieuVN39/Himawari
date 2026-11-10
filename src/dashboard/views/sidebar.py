@@ -74,6 +74,29 @@ def _live_refresh(storage_root: str, fetch: Callable[..., dict[str, Any]]) -> No
                 st.code(str(res.get("error"))[:1500], language="text")
 
 
+FOLLOW_LATEST_KEY = "follow_latest_slot"
+WATCH_INTERVAL_S = 60
+
+
+def _watch_body(storage_root: str, has_unsynced: Callable[[str], bool]) -> None:
+    """Looks for newly ingested data. Never changes the slot being viewed; only offers a refresh."""
+    if has_unsynced(storage_root):
+        st.info("**Có dữ liệu mới** đã được thu thập.")
+        if st.button("Xem mốc mới", width="stretch", key="watch_refresh"):
+            st.session_state[FOLLOW_LATEST_KEY] = True
+            st.rerun(scope="app")  # full rerun: main() syncs, then the selectbox jumps to the newest slot
+    else:
+        st.caption(f"Tự kiểm tra dữ liệu mới mỗi {WATCH_INTERVAL_S} giây.")
+
+
+def _live_watcher(storage_root: str, has_unsynced: Callable[[str], bool]) -> None:
+    # Paused while a KPI trial is open (nothing may change under the participant) and outside LIVE mode.
+    if st.session_state.get("timer_has_started", False):
+        st.caption("Tự kiểm tra tạm dừng trong lượt thử KPI.")
+        return
+    st.fragment(run_every=WATCH_INTERVAL_S)(_watch_body)(storage_root, has_unsynced)
+
+
 def _admin_area() -> None:
     with st.expander("Quản trị kỹ thuật", expanded=False):
         inject = st.checkbox(
@@ -109,6 +132,7 @@ def render_sidebar(
     replay_slots: list[str],
     slot_hhmm: Callable,
     fetch_realtime: Callable[..., dict[str, Any]],
+    has_unsynced: Callable[[str], bool] | None = None,
 ) -> SidebarChoice:
     latest = available_slots[-1]
     with st.sidebar:
@@ -125,6 +149,8 @@ def render_sidebar(
         is_live = (mode or MODE_LIVE) == MODE_LIVE
 
         if is_live:
+            if st.session_state.pop(FOLLOW_LATEST_KEY, False):
+                st.session_state["slot_live"] = latest  # "Xem mốc mới": jump to the newest synced slot
             selected = st.selectbox(
                 "Mốc thời gian",
                 options=available_slots,
@@ -135,6 +161,8 @@ def render_sidebar(
             if selected == latest:
                 st.html('<span class="live-tag"><span class="dot"></span>LIVE MỚI NHẤT</span>')
             _live_refresh(storage_root, fetch_realtime)
+            if has_unsynced is not None:
+                _live_watcher(storage_root, has_unsynced)
         else:
             options = [s for s in replay_slots if s in slots] or available_slots
             selected = st.selectbox(

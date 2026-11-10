@@ -96,6 +96,20 @@ def test_decision_tab_hidden_during_baseline_trial(at):
     assert "Tạm ẩn trong lượt thử Baseline" not in _html(at)
 
 
+def test_drill_down_switches_airport_and_uses_client_side_viewer(at):
+    # AppTest always reruns the whole script, so fragment isolation is verified in a real browser
+    # (.harness/2026-11-11-perf/logs/measure_after.json); here we check the behaviour.
+    at.run()
+    _replay(at, "2026-11-09T08:00:00Z")
+    picker = next(g for g in at.get("button_group") if "VVNB" in str(g.proto))
+    picker.set_value("VVNB").run()
+    assert not at.exception
+    assert "METAR gốc · VVNB" in _html(at)
+    iframes = [el for el in at.get("iframe")] if at.get("iframe") else []
+    assert iframes, "B13 frames must be rendered by the client-side viewer iframe"
+    assert not [s for s in at.get("slider")] and not [s for s in at.get("select_slider")]
+
+
 def test_satellite_fallback_only_inside_60_minute_window():
     from src.dashboard.views.decision import _scan_within_window
 
@@ -113,27 +127,30 @@ def test_baseline_trial_flag():
     assert baseline_trial_in_progress(frozen) is True
 
 
-def test_start_freezes_mode_and_clears_previous_answers(at):
+def test_open_trial_locks_the_mode_switch_in_the_ui(at):
+    # Start/Reset are browser-component clicks (AppTest cannot click them); the state transitions are
+    # covered by test_kpi_state.py and test_app_regressions.py. Here: what an open trial looks like.
     at.run()
     _replay(at, "2026-11-09T07:00:00Z")
     _select_tab(at, 1)
-    at.session_state["kpi_airport"] = "VVNB"
-    at.session_state["kpi_reason"] = "ROUTINE"
-    at.session_state["kpi_obs_time"] = "07:00Z"
+    assert not any("chế độ xem bị khóa" in cap.value for cap in at.caption)
+    at.session_state["timer_has_started"] = True
+    at.session_state["timer_state"] = "running"
+    at.session_state["trial_view_mode"] = "baseline_3_sources"
     at.run()
-    next(b for b in at.button if b.label == "Bắt đầu nhận ca").click().run()
     assert not at.exception
-    assert at.session_state["trial_view_mode"] == "baseline_3_sources"
-    assert at.session_state["kpi_airport"] is None
-    assert at.session_state["kpi_reason"] is None
-    assert at.session_state["kpi_obs_time"] == ""
     assert any("chế độ xem bị khóa" in cap.value for cap in at.caption)
-    next(b for b in at.button if b.label == "Đặt lại").click().run()
-    assert "trial_view_mode" not in at.session_state
+    mode_switch = next(g for g in at.get("button_group") if "Baseline" in str(g.proto))
+    assert mode_switch.proto.disabled is True
+    # Closing the trial (submit/reset) unlocks it again.
+    at.session_state["timer_has_started"] = False
+    at.session_state["timer_state"] = "idle"
+    del at.session_state["trial_view_mode"]
+    at.run()
     assert not any("chế độ xem bị khóa" in cap.value for cap in at.caption)
 
 
-def test_kpi_tab_submit_rules(at, isolated_data, monkeypatch):
+def test_kpi_tab_renders_form_without_recording_anything(at, isolated_data, monkeypatch):
     log = isolated_data / "logs" / "kpi_trials_test.jsonl"
     from src.dashboard import app, kpi_evaluator
 
@@ -144,19 +161,55 @@ def test_kpi_tab_submit_rules(at, isolated_data, monkeypatch):
     _select_tab(at, 1)
     assert not at.exception
     html = _html(at)
-    assert "Bài thử quyết định có bấm giờ" in html and "Chưa bắt đầu" in html
+    assert "Bài thử quyết định có bấm giờ" in html and "Phiếu nộp kết quả" in html
+    # No answer is pre-selected and the reason dropdown starts on its placeholder.
+    assert at.session_state["kpi_airport"] is None
+    assert at.session_state["kpi_reason"] is None
+    reason = next(s for s in at.selectbox if s.label == "Lý do căn cứ")
+    assert reason.value is None
+    # Plain `st.button` Start/Submit no longer exist: they are browser-component buttons.
+    assert not [b for b in at.button if b.label in ("Bắt đầu nhận ca", "Nộp & chấm điểm")]
+    assert not log.exists(), "rendering must never record a trial"
 
-    submit = next(b for b in at.button if b.label == "Nộp & chấm điểm")
-    submit.click().run()
-    assert any(NOT_STARTED_MSG in w.value for w in at.warning)
 
-    next(b for b in at.button if b.label == "Bắt đầu nhận ca").click().run()
-    assert "Đang chạy" in _html(at)
-    at.session_state["kpi_airport"] = "VVDN"
+def _captions(at) -> str:
+    return " ".join(c.value for c in at.sidebar.caption)
+
+
+def test_live_watcher_states(at, monkeypatch):
+    from src.dashboard import app
+
+    monkeypatch.setattr(app, "has_unsynced_raw_data", lambda root: False)
     at.run()
-    next(b for b in at.button if b.label == "Nộp & chấm điểm").click().run()
-    assert any("Chọn lý do căn cứ" in w.value for w in at.warning)
-    assert not log.exists()
+    assert not at.exception
+    assert "Tự kiểm tra dữ liệu mới mỗi 60 giây" in _captions(at)
+    assert not any(b.label == "Xem mốc mới" for b in at.sidebar.button)
+
+    # Replay mode: the watcher is not shown at all.
+    _replay(at, "2026-11-09T07:00:00Z")
+    assert "Tự kiểm tra" not in _captions(at)
+
+    # LIVE again with a KPI trial open: paused, nothing may change under the participant.
+    at.session_state["op_mode"] = "LIVE"
+    at.session_state["timer_has_started"] = True
+    at.run()
+    assert "tạm dừng trong lượt thử KPI" in _captions(at)
+    assert not any(b.label == "Xem mốc mới" for b in at.sidebar.button)
+
+
+def test_live_watcher_offers_refresh_and_jumps_to_newest_slot(at, monkeypatch):
+    from src.dashboard import app, data_loader
+
+    monkeypatch.setattr(app, "has_unsynced_raw_data", lambda root: True)
+    at.run()
+    assert any("Có dữ liệu mới" in i.value for i in at.sidebar.info)
+    newest = max(data_loader.load_decision_slots(app.STORAGE_ROOT))  # STORAGE_ROOT = isolated copy after run
+    at.session_state["slot_live"] = "2026-11-09T07:00:00Z"  # user is looking at an older slot
+    at.run()
+    assert at.session_state["slot_live"] == "2026-11-09T07:00:00Z", "the watcher must not change the viewed slot"
+    next(b for b in at.sidebar.button if b.label == "Xem mốc mới").click().run()
+    assert not at.exception
+    assert at.session_state["slot_live"] == newest
 
 
 def test_obs_time_preview():

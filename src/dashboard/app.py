@@ -20,6 +20,7 @@ from src.dashboard import components as c
 from src.dashboard.data_loader import (
     fetch_and_update_realtime,
     get_b13_image_sequence,
+    has_unsynced_raw_data,
     load_audit_and_reconciliation,
     load_decision_slots,
     normalize_timestamp_pair,
@@ -124,6 +125,7 @@ def main() -> None:
         replay_slots=replay_slots,
         slot_hhmm=_slot_hhmm,
         fetch_realtime=fetch_and_update_realtime,
+        has_unsynced=has_unsynced_raw_data,
     )
     selected_slot = choice.selected_slot
     rows = sort_slot_rows(slots.get(selected_slot, []), sort_mode=choice.sort_mode)
