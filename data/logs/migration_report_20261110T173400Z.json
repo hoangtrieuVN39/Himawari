@@ -1,0 +1,1261 @@
+{
+  "status": "SUCCESS",
+  "timestamp_utc": "2026-11-10T17:34:00.277718+00:00",
+  "storage_root": "data",
+  "migrated_files_count": 156,
+  "migrated_files": [
+    {
+      "rel_path": "raw/metar/date=2026-11-09/metar_20261109T084846Z_metar_ef19ad.json",
+      "sha256": "edb0ede648639817d750979eb863a183ad183dafb47e41f1242f64abe272759a",
+      "canonical_hash": "087b24e515c6e0b81cd43f992393916e3366a4c2e9311f747a80fe408fa883fb",
+      "source": "metar",
+      "date": "2026-11-09",
+      "batch_id": "20261109T084846Z_metar_ef19ad"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-09/metar_20261109T085235Z_metar_23d87f.json",
+      "sha256": "aac333395cac8d9524fd74685cfcd925f7da2ecf36bf55ee90c17aed794f4761",
+      "canonical_hash": "7ff6535e416037a0a65e76be82b3428cc4f01e4325d9d71968e1393a8ba6c420",
+      "source": "metar",
+      "date": "2026-11-09",
+      "batch_id": "20261109T085235Z_metar_23d87f"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-09/metar_20261109T090011Z_metar_662f6a.json",
+      "sha256": "8282d83694103885cc77b0a5c9b68c0756450aaaeb2d6ff98a63deecae75c15f",
+      "canonical_hash": "48833419ad3d7927b032efc30a7c8e9d382078b66dd8eea5008f53c3fbf42757",
+      "source": "metar",
+      "date": "2026-11-09",
+      "batch_id": "20261109T090011Z_metar_662f6a"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-09/metar_20261109T091001Z_metar_c16d13.json",
+      "sha256": "bd9a35e55dcbbc963fc2af5dd5c386f6d76ac845837e133f95199bf044ace012",
+      "canonical_hash": "95fbc844f51a2b75e3cd3fa4146e4beadd2024ea3fc70b9f05081593d008a8e4",
+      "source": "metar",
+      "date": "2026-11-09",
+      "batch_id": "20261109T091001Z_metar_c16d13"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-09/metar_20261109T092002Z_metar_e09bb9.json",
+      "sha256": "0747761c1af52ed21da3ec478532a5ee3f95a4f24afe578205043d96eea9048d",
+      "canonical_hash": "a303a2b5af5799d8768327fe26878823e946a6e4a690c3870e20aaf73e9207e1",
+      "source": "metar",
+      "date": "2026-11-09",
+      "batch_id": "20261109T092002Z_metar_e09bb9"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-09/metar_20261109T093003Z_metar_443951.json",
+      "sha256": "658fcf5fb036533002c6c0f9b0add83667a60dfed46caf71b76406dbd8e6aed5",
+      "canonical_hash": "6651c1cb00255308fa7e05c8dbfc992c046f4d9dcad1f80db5f4142974193331",
+      "source": "metar",
+      "date": "2026-11-09",
+      "batch_id": "20261109T093003Z_metar_443951"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-09/metar_20261109T094005Z_metar_d719c4.json",
+      "sha256": "078ab369b5e597c31f622a995b49b8db0d57e2a757b85c7eca7b12139e539a11",
+      "canonical_hash": "2762cf972b2ecc2dea5e2e88c866ea7b22a2806013b409829566f2fa3aa717ba",
+      "source": "metar",
+      "date": "2026-11-09",
+      "batch_id": "20261109T094005Z_metar_d719c4"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-09/metar_20261109T095009Z_metar_498401.json",
+      "sha256": "d59369bb2b7b535536f7e2b37691fa62228724d116e0eb45df1d1d09c1320cda",
+      "canonical_hash": "7835cb0ff37254f133849f04cf5595027053b06d04eb97b76446f11cf33d05d5",
+      "source": "metar",
+      "date": "2026-11-09",
+      "batch_id": "20261109T095009Z_metar_498401"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-09/metar_20261109T100010Z_metar_e53439.json",
+      "sha256": "bccb6c2df4549e01dcfc7891053d853b2b3ead7399042d96b2c31acaa13f7861",
+      "canonical_hash": "5e6dc068b0812a2252af38a95dc441e517e41a7fd32a1ce4ae3f5fa5b05b91f6",
+      "source": "metar",
+      "date": "2026-11-09",
+      "batch_id": "20261109T100010Z_metar_e53439"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-09/metar_20261109T101000Z_metar_56520b.json",
+      "sha256": "b7d1f482b417cac16835c5054bd3067fc980b177ab618a4ca6279a59777ca727",
+      "canonical_hash": "495aeb53059bb4ae434df72c5aa958af6f2994a91706a5e8d3521326ca981187",
+      "source": "metar",
+      "date": "2026-11-09",
+      "batch_id": "20261109T101000Z_metar_56520b"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-09/metar_20261109T101451Z_metar_c1ad40.json",
+      "sha256": "05e7b52723335a2d660a87c51200f1c3de88a6f406068a2e3d4b155c528dd2f0",
+      "canonical_hash": "815f98db3448203a72fda3fec0a2606e56154f2f621befab708648be977dd378",
+      "source": "metar",
+      "date": "2026-11-09",
+      "batch_id": "20261109T101451Z_metar_c1ad40"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-09/metar_20261109T102001Z_metar_67a5a4.json",
+      "sha256": "075b2653183447a9a157bb916e53dd7953c1c3ffb406dfd8c6d45ea011d551fd",
+      "canonical_hash": "dafff34cf73f1a54266ae9499ed304e5b2d5c957a6142d063cb3cd00e4e2e4f4",
+      "source": "metar",
+      "date": "2026-11-09",
+      "batch_id": "20261109T102001Z_metar_67a5a4"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-09/metar_20261109T103001Z_metar_9b5fe8.json",
+      "sha256": "583db5e4af7b5dbcbb6ea431bf5d3abb017e3f41a218722bc4b7a34aab7c0821",
+      "canonical_hash": "0f034515a1d58436826eaade39ce13e1ebc9d71a337f4edc3c68fccc3e5c91e6",
+      "source": "metar",
+      "date": "2026-11-09",
+      "batch_id": "20261109T103001Z_metar_9b5fe8"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-09/metar_20261109T105110Z_metar_8208e5.json",
+      "sha256": "ea0d0251c98b050cbc4d9885629815b8ddbfe2f4e3e4a04bf974743c43a4be36",
+      "canonical_hash": "dc5f4b3fb1786bbfec8a3fbf0534411f00907e8e4c598f07d2926772d436b4be",
+      "source": "metar",
+      "date": "2026-11-09",
+      "batch_id": "20261109T105110Z_metar_8208e5"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-09/metar_20261109T110002Z_metar_0d473d.json",
+      "sha256": "94172e48397d582499dea425ff1aae2ae1d5acf9c5007a9486246ed1de87c3a4",
+      "canonical_hash": "a28a09aba9e6710a7c0b02fc7f0c15f0eff060ebc7769e8f70574e1d833407c0",
+      "source": "metar",
+      "date": "2026-11-09",
+      "batch_id": "20261109T110002Z_metar_0d473d"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-09/metar_20261109T164343Z_metar_2da9aa.json",
+      "sha256": "6336502e80d49df8d3751da36c2b5c011d0dfe186d6a15dd3ce1d99df8dd1e54",
+      "canonical_hash": "c3cc580888a8a805d318a596940f19c2241bb2cb11d055dc43c22afd83163ddc",
+      "source": "metar",
+      "date": "2026-11-09",
+      "batch_id": "20261109T164343Z_metar_2da9aa"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-09/metar_20261109T165808Z_metar_8d891e.json",
+      "sha256": "b06d9a1e309e2bff52a2f626402781764567c8b0a5c2b4f5d0e3208dc68f5316",
+      "canonical_hash": "651e3812b64cf742b83598db3a8e0b5ee166e800ec1c1a7d4c2a8801583ecb85",
+      "source": "metar",
+      "date": "2026-11-09",
+      "batch_id": "20261109T165808Z_metar_8d891e"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-09/metar_20261109T170011Z_metar_172121.json",
+      "sha256": "09ba6666254c9aea74962f800dc71d76373c950485c4f099afb8d9071e28cf7c",
+      "canonical_hash": "bbeaf5a0c3191350dad1576f5f83b324d0a23580bb83f693670792fc6052d70a",
+      "source": "metar",
+      "date": "2026-11-09",
+      "batch_id": "20261109T170011Z_metar_172121"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T012551Z_metar_7e1975.json",
+      "sha256": "c0f1093be4ae03b858853ebfcb035325478d0f2780a4b734c5bc73e8fcc13fa9",
+      "canonical_hash": "a90f6367e1bf0578d0cdde4cdb3ff170d800eea97aee35ffad9ae31cf5b04b43",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T012551Z_metar_7e1975"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T013009Z_metar_f7dc10.json",
+      "sha256": "2f0d76f55d6d153800055f823b6566ac10130fa26bdd56e461216e0d9397b90f",
+      "canonical_hash": "5242c70225c686dd2d2fd7412476e4feacc0d7720b191e4adc5a9a8844f10b4d",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T013009Z_metar_f7dc10"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T014013Z_metar_d1f2c6.json",
+      "sha256": "1ee0efbb4670b963600d394d9b43d1ad6c5f13b513ef602f0b675464caca305a",
+      "canonical_hash": "228f0b17f074b4e828747f647288e27dcb29d0703b1ceedb47cac8b691a7ea7d",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T014013Z_metar_d1f2c6"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T015014Z_metar_e5c410.json",
+      "sha256": "aa0278fde36a7a41e532936aa539352d3d48576e100857deca53b03d8c776d2e",
+      "canonical_hash": "57dfe38985a4933d17f5e7817caf7fa6150e65908b131cc8411082851ea56724",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T015014Z_metar_e5c410"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T020001Z_metar_a4668c.json",
+      "sha256": "19965dc5188290e4725bdb0869d6a4713255b06b28ae168b5234526c1b47c40b",
+      "canonical_hash": "c38f585e1223f7073c2e60998ab6cbfdfa1dc36e63282df2dad9e906ee466337",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T020001Z_metar_a4668c"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T021237Z_metar_3f0b22.json",
+      "sha256": "1390617043849a64b468ff0af6b6a68f8253cd40b22473591e3acfa2f63115f6",
+      "canonical_hash": "63b7510695e5c2a19c0c669a241cbc425f975b762e38c525fa4112570897148f",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T021237Z_metar_3f0b22"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T023614Z_metar_400aaa.json",
+      "sha256": "e9ce6b530035a8ff641e53285db602ea62e1feeda5d9148729365942f858a9ff",
+      "canonical_hash": "75bce1a74b4128eb5b651cc9275ba6c3e7282664098052a6737bff12b7c09e95",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T023614Z_metar_400aaa"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T024009Z_metar_94efb9.json",
+      "sha256": "b577bdbb9dd445489bbc50cd745ed3513a79cf611142662d5267e995e33b041b",
+      "canonical_hash": "8e9c3aa69a5cf5857fc4969fb9464102fb2fb414035fca1124911af55cd6aadc",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T024009Z_metar_94efb9"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T025009Z_metar_d1c3fd.json",
+      "sha256": "192d65ea205f6064cd2bc9461db3de8b64b1d0d8141dddf4bcdbce0d0888553e",
+      "canonical_hash": "bd84b2db4aa5b64073b666c260f824cabe919d9c53c143fbbe09550a799cf017",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T025009Z_metar_d1c3fd"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T030011Z_metar_6c49d8.json",
+      "sha256": "e21528f088151ec11d249b66b9938fcf636e5ab277bbcd69444d0bd3c6d7dc08",
+      "canonical_hash": "157ec690630a68d4705738a119f45ab7d30461b3c1b436898c6248229be54030",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T030011Z_metar_6c49d8"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T031001Z_metar_23d05e.json",
+      "sha256": "415fd9f9aec66d330d9c70e06985b7afd70554cc162c876306517f7e8661f422",
+      "canonical_hash": "a3cf22a58736b6bd3ebf9baa67f5a6fd439fe1d5535e5eed931386f1c1a1299b",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T031001Z_metar_23d05e"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T032004Z_metar_064eeb.json",
+      "sha256": "83151672e9fd0949cd7fb7168fd0389a8f5899dd093b04641a6aef5597028edd",
+      "canonical_hash": "a081eede27daecb597c641a44abc82a6afd34fecff1a089c3deff9c1611d1a18",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T032004Z_metar_064eeb"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T103516Z_metar_0cf03a.json",
+      "sha256": "6145b5f1d16734f873ca2ab89cdc0d3c91841ec0894aa0691af005bd7e565460",
+      "canonical_hash": "2fedfa7050e5098dec12bf6fda8038ef00d220f8e203aa4c1134608dfd26246b",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T103516Z_metar_0cf03a"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T104007Z_metar_2acc75.json",
+      "sha256": "9b94a613b55e7ca78517a437e57f2a3e014eff3fa4777836746415df60924770",
+      "canonical_hash": "4bbbc3b8381dc5163fcd4060b1cbd69568d2199e5e78dea6d1318541c8e03e4e",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T104007Z_metar_2acc75"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T105008Z_metar_f2c1ce.json",
+      "sha256": "46eeda413c1248c2b9c7c2b86fa078d20c274c7013be469577c72ce340d2d3df",
+      "canonical_hash": "022568bace50e94e3194b1724246265c45470550ee903551393caeee00361dcb",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T105008Z_metar_f2c1ce"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T110009Z_metar_687a8a.json",
+      "sha256": "f0a92c744c44a1a4a086727f7571f8cd6e4e3221a999fb987287889bf2cf9a56",
+      "canonical_hash": "0f33ae90db282df6763ee62a7a079f30c254afd39f8787083f159ce5b934d5e3",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T110009Z_metar_687a8a"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T111000Z_metar_adced7.json",
+      "sha256": "7f71973dba821aae0e4a51420cec1fee1bd8c0c89b721bf8bb0d6a0618b25298",
+      "canonical_hash": "88e742a0db5ba59ca8200f0fb9b06b698ec5aedbec2183bfbb79c38e8f7ca809",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T111000Z_metar_adced7"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T112001Z_metar_8be838.json",
+      "sha256": "10ff52035961ccf686d910fe63520b524f3ad9ba84f701d109fee0eba7a0c1fe",
+      "canonical_hash": "da44416c5e4f587f817a7e65c22f33ae9b8916985b20d356875ca5be07457a00",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T112001Z_metar_8be838"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T113003Z_metar_5245d2.json",
+      "sha256": "d6ab928cc9dd46277c2f61dd2b0970c9d13c98fd7eb185fb05eb2d4d6e128c18",
+      "canonical_hash": "16efb3307875f9fa0a1d78fc120a071e7cf21c5dee444e47a41146f9d9140d05",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T113003Z_metar_5245d2"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T114004Z_metar_d51165.json",
+      "sha256": "d6dd5a3cb1c66d95e6d90980a7bab877f77649024b3972aefa3ec21016a2767b",
+      "canonical_hash": "d67340ed1c1c053b9b586fee8920b2b5473f076b30598dd42b83ab07e84e08c0",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T114004Z_metar_d51165"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T115008Z_metar_6cec9b.json",
+      "sha256": "b43959d7d3b70476c83c43aa7b893b89ead5a67b3f770db1a9a9a41eb67ef0a7",
+      "canonical_hash": "72f8288ddf834d743ba1d2ddb923902545ee094aca49480addbd7ba844087663",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T115008Z_metar_6cec9b"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T120009Z_metar_7297f6.json",
+      "sha256": "4ecb7f9b2cadefab44cc1c8feb91564141724676ee107e7f71aabc7aacca63e6",
+      "canonical_hash": "984a7dca212027a3c3ba3d34647177c494f99dc3afc6ef421eae81f18006a2d0",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T120009Z_metar_7297f6"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T121014Z_metar_53ed3c.json",
+      "sha256": "d1e2cc6cc298589eca3ca423622d814365f337ac1e8994bd4548028e32de908f",
+      "canonical_hash": "94cc0c4d24ebb1d988c2e411d47aa6f2881e412f1b5a0cfcb3d4f68db0d6d2c7",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T121014Z_metar_53ed3c"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T122000Z_metar_6969ba.json",
+      "sha256": "bbc2a7a9e2c66a6aee098d0fedbfcdc975c20cc0c442438949bb5929eddf23e3",
+      "canonical_hash": "630f0590c3576a1bf9e56d584c57d344ee848327f63af335e12897df1bdf496f",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T122000Z_metar_6969ba"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T123001Z_metar_64258e.json",
+      "sha256": "12238b58a716e0e7d34dc9eedb8a946ee12766a9a1d17b410111f8efcb9b64e1",
+      "canonical_hash": "32ab6a12736c36bd43e9142a5230a46ac348198a10e1bad8f438d2447c446b78",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T123001Z_metar_64258e"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T124000Z_metar_d7a41f.json",
+      "sha256": "6f0140c97c79e127790775d8adc05e29931c44e301ca4eceb50aee0cc9b292e6",
+      "canonical_hash": "f7c4bdc9f27629a5184bcd2b6757df5e6463ac92a41b33cb91ee96f30f1bf921",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T124000Z_metar_d7a41f"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T125001Z_metar_6dfa7a.json",
+      "sha256": "e5f4239a180922cc351bb0f561ba478e3fe20820dc6fdc9e86c086af414e8da6",
+      "canonical_hash": "5fccf16da4474d80ea21ce054e468674fc0e31f97fb05448834da7047e011e2f",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T125001Z_metar_6dfa7a"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T130008Z_metar_f0f057.json",
+      "sha256": "8e3a56301b6dd4f023290b62c0e5c8a3ddc1a5c391bfcbdc37e3cafb8f823221",
+      "canonical_hash": "4bb406dd8ed04b36902d25ae42453b12724c49bd8facfdd18538494491aec6e4",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T130008Z_metar_f0f057"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T131008Z_metar_4af1c5.json",
+      "sha256": "c2eff366498c812798becc3a42af5567f821c7aed4c0c733bd5bf4391115f8c7",
+      "canonical_hash": "e450b63c0adcaeb2bfac165db93aeef76c3e411226e2514780c84159d6cf013e",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T131008Z_metar_4af1c5"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T132009Z_metar_7412bb.json",
+      "sha256": "41f51cbd7b46c344aa8cc9c233905b7ac328bf8619b3c5af2f8558ced8c95538",
+      "canonical_hash": "7598985d4dd6f092249f1571185e4e5aef3b9ec80276fd4cc14df0fe78409799",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T132009Z_metar_7412bb"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T133011Z_metar_14ed81.json",
+      "sha256": "bdbed4ed75744af0dd0a184083fd91537b3e02e8a13929b5b538967f0624cdd0",
+      "canonical_hash": "56fbbc5f0d384d348d0ba438821dc2318a32c642b3e086dfc501760a78e599dc",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T133011Z_metar_14ed81"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T134013Z_metar_3044ac.json",
+      "sha256": "41228b72661983ab79491cbd1ab1675e4f549d4a212a04a59fcace6bc634c784",
+      "canonical_hash": "6bc1d23202d76a366013d52702a11aa3e2924c9d1967b343baba82a27fc73fed",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T134013Z_metar_3044ac"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T135014Z_metar_a12d9a.json",
+      "sha256": "a4e64ffb632143af60a2bc1a00c3acb3d46473c3d430120470e1ce747176c708",
+      "canonical_hash": "f0c82e12a0692587f1d240016e3f4dfa94e9c943e946148ecd6db6278cf539fa",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T135014Z_metar_a12d9a"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T140014Z_metar_d32f99.json",
+      "sha256": "c7c532e6f36603208f3d1a6292c4866cd5b1a41d72ce7a7ea324176f5e04ce90",
+      "canonical_hash": "df379a897ebb0fdff54fa4e8f9571aefb366fd464fecbfb6acb1a1a400086307",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T140014Z_metar_d32f99"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T141004Z_metar_e1e368.json",
+      "sha256": "120d9dd9bc7cbc1efddb561d952b5fcfdb6ffeae04a38a35d3b3a6be0824a5db",
+      "canonical_hash": "9ca069359bca79f997b9c9f905a0b76c8728e607958e6495e9d34020bc934aba",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T141004Z_metar_e1e368"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T142005Z_metar_457a70.json",
+      "sha256": "45105e1ec87b39bd9a6ecd4a013f8150cb357a40b7d4dce7fe833d0cd0491174",
+      "canonical_hash": "27ca603333fd6a0eeb787a2ad616a14ab071e174c1bae015d6225f88f5c41c27",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T142005Z_metar_457a70"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T143007Z_metar_464b80.json",
+      "sha256": "b2167f8dfb7c7c93b51f9574484e1e5d27ffb275cb40a0dcf0c11eaa8d801fc5",
+      "canonical_hash": "a14881ed99a07b743768bd9f900f1734cd451382e8956bb831507ad2502747d8",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T143007Z_metar_464b80"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T144010Z_metar_80a040.json",
+      "sha256": "66149a60caab87950d6b8045a9afe5b61a5d815771f805a087b73e5ff7366da6",
+      "canonical_hash": "87d6bf192922a5486545df654bfc4b354c4c63ebd063fcacf7a1fd6e0b9929e7",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T144010Z_metar_80a040"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T145012Z_metar_e8241d.json",
+      "sha256": "6ca9aa4e62644b8af58774efed7e822feff9308899716e84fffd2e7598a063e4",
+      "canonical_hash": "1c48f2d7da0a8a842278c5f01b6912b571f79fb2bd35e2b7d15cb7d9274e9d51",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T145012Z_metar_e8241d"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T150014Z_metar_cc5f33.json",
+      "sha256": "50aca730c78d4bd1f102f2d0ab09d92ac7c06e30fdfb0613cfcadccf4a7efbc7",
+      "canonical_hash": "aff49513ec4dcf87b04f9d4a669327ad40374c9292bb0a5e0073bee8ff52ac52",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T150014Z_metar_cc5f33"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T151008Z_metar_ba0e45.json",
+      "sha256": "4fe8028bfda1fb059d665b8f7c840b52408bf2b832b12e537f2686644923051f",
+      "canonical_hash": "971814f5776a4e2e878a04de361f5c4dd6c6527a8ec065d6fe41be64c9e14a71",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T151008Z_metar_ba0e45"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T152015Z_metar_6c6b21.json",
+      "sha256": "3423bc1af1addba03ea3f04bb53bfc876324fd24923c20f4024ecd79d2e1b3f8",
+      "canonical_hash": "f843f05710375d7eeb393eee73b9ef70afdd07c8f4a2663e2d6b494fa3b4e2df",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T152015Z_metar_6c6b21"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T153009Z_metar_7fb7db.json",
+      "sha256": "f8010ea9e475731f03861f3751d7c774c348da988fb4cb7d015280f12b2184e6",
+      "canonical_hash": "140e2b54a9b61ab5e68292dc6bb25dd0f47b19a50a835c361038ecc36d7de5c5",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T153009Z_metar_7fb7db"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T154001Z_metar_87d68e.json",
+      "sha256": "4f1b6119393582836129a039ca4390f338200dffff97bff2185ec3e4d4f1afa4",
+      "canonical_hash": "8c5d981a898878bb79eb2cd0d650c91a1ac153599465039f38b0e9ed6e6a97d7",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T154001Z_metar_87d68e"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T155006Z_metar_a35bb1.json",
+      "sha256": "6ab3d98a9bc2b7c89e3a9b58e0eb1af3c01a81520f11ddf6c4882c963aa85ccf",
+      "canonical_hash": "95085e2f4b3249edb4eb04bec1320b2656001f43c77e0a0ff9f17050f24701e4",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T155006Z_metar_a35bb1"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T160009Z_metar_4eca81.json",
+      "sha256": "148ac0ddb2f017acbb1935378ebbcb13be1e567b3f31f37efe8be7d6f28a3c81",
+      "canonical_hash": "5ab2f823beda1ccca2e843c8bba9720eb737fb00a72d56d2ff22cabab8dec3de",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T160009Z_metar_4eca81"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T161005Z_metar_383863.json",
+      "sha256": "f3f580fb740a4cb7e6502327fa66eb3df485e907faf1a0d5a7d8a9ceb7a020c4",
+      "canonical_hash": "8fa5f49f6126e57b4ebffab89cdcf3939dd6ec312d2779fdf8e731e803cbaaf5",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T161005Z_metar_383863"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T162007Z_metar_c7981a.json",
+      "sha256": "d18cca5e2437eeb844d4adc44243ab5cbfceeca7947b4a3f06883d05f98a2cd8",
+      "canonical_hash": "1fe828b000a609e63e85a70cc4fd409b0326ab90f9128fd3caa2f98bace1e106",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T162007Z_metar_c7981a"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T163009Z_metar_3627a0.json",
+      "sha256": "10777e899ee28ff3ed3856e22f579e81a6ca3610abd7c77c9b2e1102f6cbd8dd",
+      "canonical_hash": "983d0166db119b313bb5e19a74232fb75f50d5a33bfd31395d2b89347b131756",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T163009Z_metar_3627a0"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T163549Z_metar_96a691.json",
+      "sha256": "3e0317dee833adb77d514696f132fe49c60d74456bacee74660eb41313ac3f8f",
+      "canonical_hash": "32e9474f7f17ec6be251ec0cac26c78e508d2ede95c8debe6e551eef027a8090",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T163549Z_metar_96a691"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T164000Z_metar_14d69a.json",
+      "sha256": "698c3a89ddede03265944870ded48fa8cb75a02c04e0c7a785f61e4e80ee284f",
+      "canonical_hash": "b7b9a88f3da3c06caaa460928a5085ad2482db092a3a0adfb242c3138c2b7d5d",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T164000Z_metar_14d69a"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T165003Z_metar_77c737.json",
+      "sha256": "9d7a0ccebbd540c7228bd6ddc94c713adf48e39921c9e0fa55d606763617977f",
+      "canonical_hash": "e8d6024af96fb7e89697c3e39d350b553a60db35d9bc04524299369af32b4252",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T165003Z_metar_77c737"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T170004Z_metar_f31f68.json",
+      "sha256": "bd256a306eb9dc232fb6c5555ac27f88f5c3d22f1efcd4729e06f9a278a97163",
+      "canonical_hash": "e97331efee16334805e812c5632e24489edbad77aed10555575cc4f4ee2ff9dc",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T170004Z_metar_f31f68"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T171001Z_metar_b31346.json",
+      "sha256": "f32f1e2c4b4b1f5fafa94318a0eda048fb5db88df96f435d2502932dc1ae6a58",
+      "canonical_hash": "5db8681dc45f0198efc308409698e31aa76a938217941e85e0a425f7eb4cf06e",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T171001Z_metar_b31346"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T171008Z_metar_b4a715.json",
+      "sha256": "f6e93781bd302f20098e496b86d0ef0a5fca5622a15ef5ffd56789b897d3369c",
+      "canonical_hash": "5772a5e19df950c60a78fae50552a7bc406663a286f2c93476eefa1dd0f82670",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T171008Z_metar_b4a715"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T172007Z_metar_58c8c9.json",
+      "sha256": "2e58e2d45276401dbc25c89c3e1056c0c372040fb588df7a2250eee42e324f6f",
+      "canonical_hash": "cde164d4256f66790212cf065f983a2d833f23efbf577985ab57246ee4f7b150",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T172007Z_metar_58c8c9"
+    },
+    {
+      "rel_path": "raw/metar/date=2026-11-10/metar_20261110T173012Z_metar_0a4e4f.json",
+      "sha256": "131f2f9da55cad034ffcf23576260f345fb3b917a0e8ff42c4251d4bf6bf1df8",
+      "canonical_hash": "f22f5632ffdbe92f6cad6a2b396384f014ee2b97667299c1e557856bb1fed1c7",
+      "source": "metar",
+      "date": "2026-11-10",
+      "batch_id": "20261110T173012Z_metar_0a4e4f"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVDN_20261109T084848Z_open_meteo_VVDN_4d1a80.json",
+      "sha256": "63bd50964c0064414a2d446d2160f8647ec87f0e6035ecb3778f788c27e91200",
+      "canonical_hash": "618f63550e88ce3c37375f5ae264cddce27215e675e6dea5d2f3e540164fe6d7",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T084848Z_open_meteo_VVDN_4d1a80"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVDN_20261109T085236Z_open_meteo_VVDN_71507f.json",
+      "sha256": "dd54663869e365d007f6945e0ee513862a1cc992a8d4db8731c5f7a51d4350af",
+      "canonical_hash": "4e63faf206ea7d86ef39ba529a1f02989fdf786760c7d34c50cfb38782bfadac",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T085236Z_open_meteo_VVDN_71507f"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVDN_20261109T090012Z_open_meteo_VVDN_82335f.json",
+      "sha256": "e142ffd2deaf5a7a762d95f0337a56cf4f85ffff21679cf2dde23fcfc2b4cb62",
+      "canonical_hash": "c3fe3d1b086bbb2edf950ad9f763d34d0209dc4d5b9c596cf894b8fea05f4f76",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T090012Z_open_meteo_VVDN_82335f"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVDN_20261109T100011Z_open_meteo_VVDN_80d931.json",
+      "sha256": "24ef05ecd2e0df03aec5a4fd3a22de071ae58c43c15e94b59c6f1be6304a5d67",
+      "canonical_hash": "e80d1d0e757e9cb92ba2d9305fd8ef9973ffb0499691592aba5c2c6228e4935d",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T100011Z_open_meteo_VVDN_80d931"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVDN_20261109T101452Z_open_meteo_VVDN_3f72e4.json",
+      "sha256": "b59027bf16b00a323c49eff78470bed10b67d936e5ccd4c784c25c3c0ee86b6a",
+      "canonical_hash": "69e641087d18188d2736e763a665515693334c53dfd9f6843b7a4eb9a2e8015b",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T101452Z_open_meteo_VVDN_3f72e4"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVDN_20261109T110003Z_open_meteo_VVDN_ab26ea.json",
+      "sha256": "51dd06ec2fbdc4edfd7809cf1425c8756378713f66ef13cd5eb85694ffb401ea",
+      "canonical_hash": "389b155f3f67a2e833d34b2c3a1eaf0684c939cf63d7b844654bd7f6bb321634",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T110003Z_open_meteo_VVDN_ab26ea"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVDN_20261109T164344Z_open_meteo_VVDN_6d5f48.json",
+      "sha256": "ec496922fe36e60abaf05ee5c9ba38c52ebaaad76ed69a586d4222a8d72f7209",
+      "canonical_hash": "6ffc204bd839b23f459be42a96a49461018e34e7a3f5fe08882e9a3dc35f8ce8",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T164344Z_open_meteo_VVDN_6d5f48"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVDN_20261109T165809Z_open_meteo_VVDN_27cd2d.json",
+      "sha256": "b2ca0f15a65c0879b8664dd567331a66885a5e194b42ac60f916606dcba22602",
+      "canonical_hash": "d1b10e3ecd61f5241e9385d931b207a16f280e8186f513725760ea09a6019d35",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T165809Z_open_meteo_VVDN_27cd2d"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVDN_20261109T170012Z_open_meteo_VVDN_1dccf2.json",
+      "sha256": "b6451907403cfdef81e2b1e9bf04903aca29f4cb6dc4768cfa57f8994f987542",
+      "canonical_hash": "e6f48c24b5ea93a1111875dff1feacaf69bb83f334307435a13d81a18e996deb",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T170012Z_open_meteo_VVDN_1dccf2"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVNB_20261109T084848Z_open_meteo_VVNB_3abef0.json",
+      "sha256": "8453c0bb9cd13c551b5b40bbc52c3e4387ea0a14ee042f311e8aef27102fffc0",
+      "canonical_hash": "e22511bac5ec639c7f2637b54c987587ec5f038a29419def2a402073744e5dd5",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T084848Z_open_meteo_VVNB_3abef0"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVNB_20261109T085236Z_open_meteo_VVNB_5ddb8a.json",
+      "sha256": "8f1816b7d370be7b99e43d2308899473b1d527f8def5b708083a5089147a89e7",
+      "canonical_hash": "e1b25e4d6ea6ca93f83a7795aad6ea383af7ea6dad838b88f64010093faa0ab2",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T085236Z_open_meteo_VVNB_5ddb8a"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVNB_20261109T090012Z_open_meteo_VVNB_90a6e0.json",
+      "sha256": "6c8143fa6cc401459e5eaa6627379e866b465815df029064cde99efff46bef7c",
+      "canonical_hash": "2045db9eda1607c38d6c8e254e60f72df79f09c73359c3c40aa348637617943f",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T090012Z_open_meteo_VVNB_90a6e0"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVNB_20261109T100011Z_open_meteo_VVNB_71d778.json",
+      "sha256": "add3d911050914d3129802ed0f14614fcc68dc5ff2bb860d974f8e688493bb76",
+      "canonical_hash": "5acb14e1aa4376e40d7df01a145efcfe132c638fd4b383f0e887e9554c9c7ddf",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T100011Z_open_meteo_VVNB_71d778"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVNB_20261109T101452Z_open_meteo_VVNB_e2fd3f.json",
+      "sha256": "33600283e046cbbe8cfe3fb5ca230b82ce798251b7338e3bec4a820b38a8e4c5",
+      "canonical_hash": "d051edfeee7c9c961b611560ec454ab64e8f417c7a50e2f2b01e03dcc3bd4acc",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T101452Z_open_meteo_VVNB_e2fd3f"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVNB_20261109T110003Z_open_meteo_VVNB_25fda1.json",
+      "sha256": "e9da14b346260d232cebfcc7ea13546fc8a7478a37fbd6d3b8425dfc76fe91f7",
+      "canonical_hash": "f80e56449654ece1e01a182c9ff4004d93b9915ab2c568a81761bcc3c6746406",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T110003Z_open_meteo_VVNB_25fda1"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVNB_20261109T164344Z_open_meteo_VVNB_727d4b.json",
+      "sha256": "60d62614414ead6a1fa95f5bc932078517ad819e52a88b203d54f2d7c0b0cbb4",
+      "canonical_hash": "0678be485ab464985eb920043d5c91f67f677b2c914417de88cf7fb542927255",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T164344Z_open_meteo_VVNB_727d4b"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVNB_20261109T165809Z_open_meteo_VVNB_a47019.json",
+      "sha256": "3340559bc117038cab5d18bd161fa97c8fb86c82ab22b7b7bc3c6247e395961b",
+      "canonical_hash": "51ef2a94e985de233e190b9e7ec6bcaa450c167d1d26a515259b09399b7d6251",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T165809Z_open_meteo_VVNB_a47019"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVNB_20261109T170012Z_open_meteo_VVNB_2a6388.json",
+      "sha256": "dbf2778f33020a01be8f43ad8251b6bea1454f646a554a5b9ae48c91ad25e1a2",
+      "canonical_hash": "dcd755cbe4cf6aa3f2172ae936e27e8e968bb57e0ac532b3e2d14bbe1dfdd484",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T170012Z_open_meteo_VVNB_2a6388"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVTS_20261109T084848Z_open_meteo_VVTS_3e2e41.json",
+      "sha256": "fd056918ed61432c0c9cff2e981445dcfdcf64b8201d385bdc59a0f0b3c8e8eb",
+      "canonical_hash": "43ec44ed137ab0c50ecb0cb142ea9bdac45bde98a71331474446fd4b62254b7c",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T084848Z_open_meteo_VVTS_3e2e41"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVTS_20261109T085236Z_open_meteo_VVTS_fcba2d.json",
+      "sha256": "64bd1b0b86ad386053faae346d181d6e2d301042e5a7a44882c405709f7ed2e8",
+      "canonical_hash": "14490570977272e6bedf5829045d050b80b467ad5187cf51d42a9c1dfec88837",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T085236Z_open_meteo_VVTS_fcba2d"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVTS_20261109T090012Z_open_meteo_VVTS_911da4.json",
+      "sha256": "cbb7d9d14934ad5c8696d4aadbce5a9a956b7bf82367678d296ff5d09e7cd4d1",
+      "canonical_hash": "66549879a692d2cdb4ee6b17e77d10c037132265d2cdeee933620b4a1933994c",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T090012Z_open_meteo_VVTS_911da4"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVTS_20261109T100011Z_open_meteo_VVTS_dde959.json",
+      "sha256": "dc2b2b3e1a3fa456460d56e0d56b01a078691c7364eb1ffe7b1022fd19453270",
+      "canonical_hash": "c81f5db174a6ee0bcb8ba2ebaf1613c232737b8796eb74dbdeeca899eb4e5efe",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T100011Z_open_meteo_VVTS_dde959"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVTS_20261109T101452Z_open_meteo_VVTS_0eef79.json",
+      "sha256": "9fd89af0c066b55f1f90cc477b934a9c8e5196418e098d64b70fb2619f1b9873",
+      "canonical_hash": "098fe4defc1cc1fa63dbddb2c9e5aa0d1eed5f66466cde3dca41fb83d730bc42",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T101452Z_open_meteo_VVTS_0eef79"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVTS_20261109T110003Z_open_meteo_VVTS_f052e9.json",
+      "sha256": "09678a6444aca63bbff4860aa28b307d2b67b3dcd4754bd2631289259f677c64",
+      "canonical_hash": "9fcc8912af2a07ef9f4fd4c3e6a49b024c3ef30ea549e5bc4b7c2e45f38daa1b",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T110003Z_open_meteo_VVTS_f052e9"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVTS_20261109T164344Z_open_meteo_VVTS_72caa7.json",
+      "sha256": "1676ff65891ca6602a6724c39d515aaec886066a4cf51988fa7b12fb16fda2dd",
+      "canonical_hash": "831eede4dc82d29f4672bb7fdf1e60edfc2ced41e5b920469f704af79be2df36",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T164344Z_open_meteo_VVTS_72caa7"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVTS_20261109T165809Z_open_meteo_VVTS_44c05e.json",
+      "sha256": "8c17ae3468f6da1596d58294900d6c4587ed34bfe918483b0bdd8d808b3bed8f",
+      "canonical_hash": "31a5cf0c7b4fab0ece6218469c11c4e6d622e7c8c215cba4ba7fc3c3bc891acf",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T165809Z_open_meteo_VVTS_44c05e"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-09/open_meteo_VVTS_20261109T170012Z_open_meteo_VVTS_61767d.json",
+      "sha256": "19ce59c3cfe5fb8d0cdc7bdefbcc8e6668f0d3a3e0d65fc92a599e0031887ff0",
+      "canonical_hash": "d608b17893c076528d707ffcf044c03f0c2ae031413b8597da8960716df3eeee",
+      "source": "open_meteo",
+      "date": "2026-11-09",
+      "batch_id": "20261109T170012Z_open_meteo_VVTS_61767d"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T103517Z_open_meteo_VVDN_acb6ad.json",
+      "sha256": "acfa2bd959a3e03798cfea19572152f825b54c6440eeab2480938c685f6ee1e7",
+      "canonical_hash": "4aa7daf3049f33808d8c4d20834d15c992dbe38033ef1c9d5244b6211a4d5407",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T103517Z_open_meteo_VVDN_acb6ad"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T103517Z_open_meteo_VVNB_c79b89.json",
+      "sha256": "b2de4c032a27241830d72183496aa64f4f37fb81480943c267d70f361be5f3ad",
+      "canonical_hash": "b20734a713238e44dee01afc7f4ed16eedfbb4381825aeee57cefb8dcc7aa3cb",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T103517Z_open_meteo_VVNB_c79b89"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T103517Z_open_meteo_VVTS_c8e2b8.json",
+      "sha256": "9f67c2cab440dcd11e0c7c1d82d5e2582cebd82eab422c9ebf423a7913c54d61",
+      "canonical_hash": "6b32888188bfbcf8bd8b187008eec9e59f27c55da4cdde7f14155dbe0883e19b",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T103517Z_open_meteo_VVTS_c8e2b8"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T110010Z_open_meteo_VVDN_177da2.json",
+      "sha256": "4ea45d5444dbe8aef5b3a02ddaf84986405fa4ca25b07ced53c51c555bb432e1",
+      "canonical_hash": "acb916e199be40da33d8327b7d23208931a837ecc896b1211639911859df5d4d",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T110010Z_open_meteo_VVDN_177da2"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T110010Z_open_meteo_VVNB_8f4b14.json",
+      "sha256": "fa6adf33e3c49ad06c8be0568ee440345772c45a7e8f58fdb133197856310150",
+      "canonical_hash": "3e0624b8e8dcd946c032fb8355c9ade3de3e32b30f44f90a9a278c76595131e7",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T110010Z_open_meteo_VVNB_8f4b14"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T110010Z_open_meteo_VVTS_2b84b9.json",
+      "sha256": "2a4827cc297775801cf29ef6c29515690374b7325fbad2fe6c1047ccc45b8391",
+      "canonical_hash": "68e7c15fa27571ad61d2bb21227ffe731dd88c61d842172d03ee0acf6e41929f",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T110010Z_open_meteo_VVTS_2b84b9"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T120010Z_open_meteo_VVDN_17ea2f.json",
+      "sha256": "3e19220c9cf1d3275fbf1e059cd0719c47e6932f88fff43225ff5e0c099029a4",
+      "canonical_hash": "17ca14eaef717a1b06d3917e9c45e1c6afc8cc2a394cf5999dc66e3ecfbd5f26",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T120010Z_open_meteo_VVDN_17ea2f"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T120010Z_open_meteo_VVNB_631d6c.json",
+      "sha256": "3cbfb251d7dbe4cb216c85b836a0f71d8dba3f5cbd1ee7a3c74386301abe4408",
+      "canonical_hash": "7f97b9cbd654f9e9d689c7329763791f338d81c29cc17e228a4482a82da7dfe7",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T120010Z_open_meteo_VVNB_631d6c"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T120010Z_open_meteo_VVTS_33e987.json",
+      "sha256": "a673acd70c16da7faa6780cf8facd84222d146a039d651a350ea0db31b81bbfd",
+      "canonical_hash": "0ca9526e270080ff10e34c3b3a1ca348c7e23fc5fdea96350e2cddeccd24a7fc",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T120010Z_open_meteo_VVTS_33e987"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T130011Z_open_meteo_VVDN_2a5fcc.json",
+      "sha256": "7d81fe93c1fafe4b0c27304f8f12bf9fce8196ac67d938f36dfc22997df638f6",
+      "canonical_hash": "32b3b1e7a99914e35d70db9d7e0653c29269a097a4c5cdcacc35d71e402260b8",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T130011Z_open_meteo_VVDN_2a5fcc"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T130011Z_open_meteo_VVNB_b53868.json",
+      "sha256": "9742b4a362e24f934923468bf6e427be4fa7958f3deed3655aaccbf6e5abae4b",
+      "canonical_hash": "6c21d0b4cc6a783817a4e7de313d2be3f7747b7a4e24d77a7f3b468279cb02f8",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T130011Z_open_meteo_VVNB_b53868"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T130011Z_open_meteo_VVTS_8f0a9c.json",
+      "sha256": "e7dbe49ed939ab08170da4693eed999509001798ac0043474d51fc1ca61ca172",
+      "canonical_hash": "ccb130c86cbe074b2c212cfde71c498f00927a28f33d31163ba15dc1b7418c6b",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T130011Z_open_meteo_VVTS_8f0a9c"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T140015Z_open_meteo_VVDN_e71ed4.json",
+      "sha256": "e5ba8d68bffedc8c3f2e0df515ef09199e7d4002e9588622a01081e0092dd086",
+      "canonical_hash": "8763aef28bd06b8110448fb68ace1f14f25cf4a4d87ab68a640ae4b97cad4c5b",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T140015Z_open_meteo_VVDN_e71ed4"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T140015Z_open_meteo_VVNB_a71e98.json",
+      "sha256": "c3338171d9e2761473aec5537ff4b31232a13c4ab4b42cd6d3e13e4c813b0c92",
+      "canonical_hash": "b46ef03d5f5e8e2b6636122de430049901d5f5386e48bd33d40e066f368a5e52",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T140015Z_open_meteo_VVNB_a71e98"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T140015Z_open_meteo_VVTS_618f18.json",
+      "sha256": "a38c3e738cd95a52dc583a40a07db14f3dd9037e076b748435607cdbcdb8968f",
+      "canonical_hash": "8480e31a09a88c37122fb8cc3d46f44c8b8035284896959f3f4b798d5b419a37",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T140015Z_open_meteo_VVTS_618f18"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T150015Z_open_meteo_VVDN_98e57c.json",
+      "sha256": "d18b650e109c2aea39bf1f156a0a02684fe77d7ba82cfca358d2d573a3bd836c",
+      "canonical_hash": "4ed7bccbe054ca019e5ddb5ee6586ea977edc0fa795573b5d726947f6b2b9485",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T150015Z_open_meteo_VVDN_98e57c"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T150015Z_open_meteo_VVNB_08017c.json",
+      "sha256": "207218c9b5c789f1c9b95f1f4e731194d5d3258e7c911f56e1c629a01a013120",
+      "canonical_hash": "0ed46944656538d0af83fc819876abc57195074eceb9b1e7d6cda9c0f703ae62",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T150015Z_open_meteo_VVNB_08017c"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T150015Z_open_meteo_VVTS_6e24d7.json",
+      "sha256": "d265ff1000e904fed36d0a9df694da2278483671a49e32ac0a52a2d458330f9b",
+      "canonical_hash": "b7fba815b030370e26e0e78313f42855e6aab938b6fcc40c8f3e80e56e30bd20",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T150015Z_open_meteo_VVTS_6e24d7"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T160010Z_open_meteo_VVDN_926d72.json",
+      "sha256": "c9042260118943aca2c934f2cbd19a4c3fbb421b4cf04ed5e9686111f9522019",
+      "canonical_hash": "2a8319a1a084a96790cea617a526a189c77a9950838ced9247f1af9ce8cdadfe",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T160010Z_open_meteo_VVDN_926d72"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T160010Z_open_meteo_VVNB_688c63.json",
+      "sha256": "479eac4750203c0b6ee4fe5db44c31600b0b0a74591ea4744bb83d16a4a0105a",
+      "canonical_hash": "ecede7f591106581b32ae6d53828c91571c0040df6f214b9fab55bcd69865591",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T160010Z_open_meteo_VVNB_688c63"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T160010Z_open_meteo_VVTS_e2704e.json",
+      "sha256": "3ff45cad4296495ec67ccb3f63b72e09580ebdd3031ad08ba0ce7657707e17a3",
+      "canonical_hash": "079777a2054a2e2cfb16bbdd371ea07a9db843eac180ac6315be6cbe819a9d50",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T160010Z_open_meteo_VVTS_e2704e"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T163551Z_open_meteo_VVDN_84a567.json",
+      "sha256": "36fd3de47e1fd6d3d116559d66700336c748fe57bb020e1b23a2987522cdeb0d",
+      "canonical_hash": "d555276cf94f05ca3d2abff5c7b70a2a4682de11c378e3f1feefe378ec9be954",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T163551Z_open_meteo_VVDN_84a567"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T163551Z_open_meteo_VVNB_e038d5.json",
+      "sha256": "ea13b28176a1ea755ff9e5c52876280346ad19e55d999b350f336c97b0a1b6f9",
+      "canonical_hash": "1253b91338a8c33d05d2561252a961f4699b952db5b0e994edf2b408f09b1300",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T163551Z_open_meteo_VVNB_e038d5"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T163551Z_open_meteo_VVTS_15f6ef.json",
+      "sha256": "36ec212e2cc8773f528691ef802fd3f3882730d5f84b45e65f8c3d9e37e48e38",
+      "canonical_hash": "8286dcb4856de176691bc8eaff358f8b5abef3b9b533b19129c7c663711364f1",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T163551Z_open_meteo_VVTS_15f6ef"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T170006Z_open_meteo_VVDN_62e588.json",
+      "sha256": "4eec86e49de5df9c37d82d8e2fca43e6eaa718ba72024605dabedfcba0a60264",
+      "canonical_hash": "36b9299c9b2fd53bdbc1188ef9879ed47ef00483a22134cc2bbbc46e381da997",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T170006Z_open_meteo_VVDN_62e588"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T170006Z_open_meteo_VVNB_784368.json",
+      "sha256": "aebf29369725300d7a6b3ae2c68e7f1489831a579e7ffdd9b60b6dd8e1a56326",
+      "canonical_hash": "fb4154ccbc8621f95c38bf76a49fb6b0e8fa4d6cf881ee3d5e2443de918f455d",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T170006Z_open_meteo_VVNB_784368"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T170006Z_open_meteo_VVTS_45c8df.json",
+      "sha256": "fdf95890f363de5cb827e85c39d8734327283d0bf88fcd413e4b5213a1cbfb16",
+      "canonical_hash": "7d4a390372592d3146dd4e22247c2dff6ae64d408d710edba4e31f0ae3426337",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T170006Z_open_meteo_VVTS_45c8df"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T171009Z_open_meteo_VVDN_b40b39.json",
+      "sha256": "1ee3298645f24c52a76c89486640497a930a29d73e7ef647d5b139ada0ed3a40",
+      "canonical_hash": "240b8617db3536107725d837ce1be6d85b56a5881a3af202eec8d15eec44de94",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T171009Z_open_meteo_VVDN_b40b39"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T171009Z_open_meteo_VVNB_eb4083.json",
+      "sha256": "dbf85542ce6e8c3808fd8b4e3ed2073293fb4e8218189f1f9242f6b344a30d56",
+      "canonical_hash": "a88d82b2d01a9b58d3540c073477eb64ebd303483e32a72bff38f8e4b4b72403",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T171009Z_open_meteo_VVNB_eb4083"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_20261110T171009Z_open_meteo_VVTS_0893f5.json",
+      "sha256": "9b094958be7356384f2d0c7942ec2fbe0c97bdc575fc1863974a5863b12778f4",
+      "canonical_hash": "33066ea2ee7fb411ceca16baf8cf15fc38e069c692543adc76221a253a88eabc",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T171009Z_open_meteo_VVTS_0893f5"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_VVDN_20261110T012613Z_open_meteo_VVDN_6affdc.json",
+      "sha256": "6b6bcb098773356bb1b681f70649a97cf3e8ead12bb7454cb15f3dbe99786f9c",
+      "canonical_hash": "3e98914e25a403833e1316981ba5e26313fc18dc1cc86b56c597849b15ec97aa",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T012613Z_open_meteo_VVDN_6affdc"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_VVDN_20261110T020006Z_open_meteo_VVDN_249e5c.json",
+      "sha256": "bc40ae85da40f2a1c5ecb03ff6e02fd0cbc80865f92c4791b7d311fb085eaec1",
+      "canonical_hash": "3168eca961f9542a969a64dbee129287f252a2bb0679bca72a0c4885fb8be5f2",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T020006Z_open_meteo_VVDN_249e5c"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_VVDN_20261110T023616Z_open_meteo_VVDN_a0c5bb.json",
+      "sha256": "9c3ba0b6ea872598f914bbdba9689a2a681587e6df0bb6791e8cf7d1f2ecce42",
+      "canonical_hash": "c082c282768e21ed13e2c0280a461b68d0c4cf266c5e11d9bd9ef66a6f77c02f",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T023616Z_open_meteo_VVDN_a0c5bb"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_VVDN_20261110T030012Z_open_meteo_VVDN_27432f.json",
+      "sha256": "c2c862a2cdfe43822b48fe1988f0d5d2f5bbef71f2c9779cee4b95b35f6b59f2",
+      "canonical_hash": "35dd8c67519c3c63b2e331ad825ef0463af8a80193131a3706b4478af2846110",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T030012Z_open_meteo_VVDN_27432f"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_VVNB_20261110T012613Z_open_meteo_VVNB_a976c3.json",
+      "sha256": "ac4d0e8447adaeb774f52c2008d16a103a60210494ddcef6388962224b264a45",
+      "canonical_hash": "a95101d1cef14a56834075a291bd682d58d457a8ead2551877e307e4993d1db0",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T012613Z_open_meteo_VVNB_a976c3"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_VVNB_20261110T020006Z_open_meteo_VVNB_1e2a52.json",
+      "sha256": "c778739c5ccf94f275009d674be3197a9df99597dcf5b92c3538de209591f9fa",
+      "canonical_hash": "169f1255330f64c1eb3d551e50b1c2be6d1768816de3dc410c8abcf10925cd77",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T020006Z_open_meteo_VVNB_1e2a52"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_VVNB_20261110T023616Z_open_meteo_VVNB_c3b561.json",
+      "sha256": "42e9f5f4d33f34aee2a7f2dfb8ea614b6757cd659e528d1e4e7ed190d4960fbd",
+      "canonical_hash": "b9d71f98088d6ae747e8715bf8a9e5133a934e4766b0cf92c57fb2a7c4fbd5a8",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T023616Z_open_meteo_VVNB_c3b561"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_VVNB_20261110T030012Z_open_meteo_VVNB_a422a1.json",
+      "sha256": "e6dc3e24516acc43cbbb2ef4d41c2c6d6ffd69568128b23fcf98b23e38a48fb9",
+      "canonical_hash": "2fccdf2dba2725b07d22f8cdbe2cd2271777ba90dfedf16f937ff4f243ede215",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T030012Z_open_meteo_VVNB_a422a1"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_VVTS_20261110T012613Z_open_meteo_VVTS_9e0cdd.json",
+      "sha256": "10275cce71f22dca38d4679a0f5fe9bfb119e721e49ac89923e8fb6082583bc0",
+      "canonical_hash": "984b2cf482bba6878833faee0bc7d6101b94cf842974f67937a594ac8207921d",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T012613Z_open_meteo_VVTS_9e0cdd"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_VVTS_20261110T020006Z_open_meteo_VVTS_248d72.json",
+      "sha256": "1fee41e32bf9e13e22a66ee904ec2d44ef2ec449a796c95ed88be18ae36104d2",
+      "canonical_hash": "7bbeced96fcf33470c8e5326af9dad50acd0d1da9b6dd7dc095aed79ff593c7c",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T020006Z_open_meteo_VVTS_248d72"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_VVTS_20261110T023616Z_open_meteo_VVTS_b3499d.json",
+      "sha256": "e467a064816663183dc88481eb8c976c0735a30ef7283c4d3c61f175d5d2dc77",
+      "canonical_hash": "9b3dae2cf4e642581c35cb25f6904ca34fd516023329e937cb4745923c96874d",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T023616Z_open_meteo_VVTS_b3499d"
+    },
+    {
+      "rel_path": "raw/open_meteo/date=2026-11-10/open_meteo_VVTS_20261110T030012Z_open_meteo_VVTS_4f9fae.json",
+      "sha256": "5b6f66ec391c9ad84ff6106da742fdc519a293b8f97bdd46ba777c987aa570b9",
+      "canonical_hash": "cf49a6332bd9a37165a03153a53662eb939c9d670d788aa1f2836611dd27c515",
+      "source": "open_meteo",
+      "date": "2026-11-10",
+      "batch_id": "20261110T030012Z_open_meteo_VVTS_4f9fae"
+    },
+    {
+      "rel_path": "raw/himawari_metrics/date=2026-11-09/himawari_metrics_20261109_0700_20261109T102121Z_himawari_metrics_cbebbe.json",
+      "sha256": "28f07d2b11afdd921e4aebdff86b746b01c661587e83fca9c9dd1812209117ef",
+      "canonical_hash": "29050e2b2eef0e71f7f9b722772069a1e9a967af41e47694c74c7e7df58c2d55",
+      "source": "himawari_metrics",
+      "date": "2026-11-09",
+      "batch_id": "20261109T102121Z_himawari_metrics_cbebbe"
+    },
+    {
+      "rel_path": "raw/himawari_metrics/date=2026-11-09/himawari_metrics_20261109_0710_20261109T102139Z_himawari_metrics_597dd7.json",
+      "sha256": "0bd787cec81c8b41593d81f00b199dba30f4d175a95faf7043aa12146c7e9ea4",
+      "canonical_hash": "8abf53838ddd8042b499104f53f55f0fddab5e2d0950aaeee94bc5280ff4f419",
+      "source": "himawari_metrics",
+      "date": "2026-11-09",
+      "batch_id": "20261109T102139Z_himawari_metrics_597dd7"
+    },
+    {
+      "rel_path": "raw/himawari_metrics/date=2026-11-09/himawari_metrics_20261109_0720_20261109T102201Z_himawari_metrics_fa2480.json",
+      "sha256": "b48bf492884cee7b84c1a541ac398ea0b77fa29b31da2c10d31d97a9beebe584",
+      "canonical_hash": "2c0451fd320f04f4afea9dbff74a22371f3e1a62a97209f15b4a54ee6c558e42",
+      "source": "himawari_metrics",
+      "date": "2026-11-09",
+      "batch_id": "20261109T102201Z_himawari_metrics_fa2480"
+    },
+    {
+      "rel_path": "raw/himawari_metrics/date=2026-11-09/himawari_metrics_20261109_0730_20261109T102239Z_himawari_metrics_695d5e.json",
+      "sha256": "57c7d29c48431937344cc5838510f1561de58b0302b932957e5e0b213aeeaae5",
+      "canonical_hash": "67a311596dfdcdb7043292d36e12481f848a56a7c8559b019d89c8450fbedf82",
+      "source": "himawari_metrics",
+      "date": "2026-11-09",
+      "batch_id": "20261109T102239Z_himawari_metrics_695d5e"
+    },
+    {
+      "rel_path": "raw/himawari_metrics/date=2026-11-09/himawari_metrics_20261109_0740_20261109T102253Z_himawari_metrics_9634b9.json",
+      "sha256": "0925fa4a1d035f1f849ee869ca3a86fdf09cbf5c72a4c3ebce13a2f7a648870f",
+      "canonical_hash": "c3af3a28b38cc985dd4f6d468c51bbd06681c603e15963591c389ab442d5aeee",
+      "source": "himawari_metrics",
+      "date": "2026-11-09",
+      "batch_id": "20261109T102253Z_himawari_metrics_9634b9"
+    },
+    {
+      "rel_path": "raw/himawari_metrics/date=2026-11-09/himawari_metrics_20261109_0750_20261109T102306Z_himawari_metrics_26e9e2.json",
+      "sha256": "1417fb4e543c059eca7c8d52f5a329b9f761c59b7399fbdda81e469711411d6d",
+      "canonical_hash": "5d9a5a82440072b7cdced4635cb18bbf1bb1cfffb4e51a224bef7a88ef2af645",
+      "source": "himawari_metrics",
+      "date": "2026-11-09",
+      "batch_id": "20261109T102306Z_himawari_metrics_26e9e2"
+    },
+    {
+      "rel_path": "raw/himawari_metrics/date=2026-11-09/himawari_metrics_20261109_0800_20261109T102324Z_himawari_metrics_325d73.json",
+      "sha256": "f188daff3101a3cf977a8243f0fde3b0319bd615c02cc137a26303abf441163b",
+      "canonical_hash": "df03f9246edb489a198f30a2c3537f9c06878484c6fa630c959da4139a8d2591",
+      "source": "himawari_metrics",
+      "date": "2026-11-09",
+      "batch_id": "20261109T102324Z_himawari_metrics_325d73"
+    },
+    {
+      "rel_path": "raw/himawari_metrics/date=2026-11-09/himawari_metrics_20261109_0950_20261109T101520Z_himawari_metrics_665587.json",
+      "sha256": "4efc8ff79c3ca4dac0210fbe32e0d6f75e9d1d1e757de31ad9c116dddc8ddccc",
+      "canonical_hash": "ea5f5e7c14cb46d0dc1c7e530fa0142c8c520f350876f5e3ee952fa82531dcd0",
+      "source": "himawari_metrics",
+      "date": "2026-11-09",
+      "batch_id": "20261109T101520Z_himawari_metrics_665587"
+    },
+    {
+      "rel_path": "raw/himawari_metrics/date=2026-11-09/himawari_metrics_20261109_0950_20261109T101820Z_himawari_metrics_f32185.json",
+      "sha256": "d40c14cc3ec6200362f9684a3550f43306489b91057fddf2adc66680968e306b",
+      "canonical_hash": "3ae2eb25ba7a4d8c6d9e2702a8b6b8bfc75c9faad50b7bb1b4fc719654e6180e",
+      "source": "himawari_metrics",
+      "date": "2026-11-09",
+      "batch_id": "20261109T101820Z_himawari_metrics_f32185"
+    },
+    {
+      "rel_path": "raw/himawari_metrics/date=2026-11-09/himawari_metrics_20261109_0950_20261109T101932Z_himawari_metrics_5c31fc.json",
+      "sha256": "840e4dc73eadd22000629f3ebccd7fb02a92fdfcf1f48cc462beaed601f58ee7",
+      "canonical_hash": "fa86c57fec09787de3dbbc1f2cc1d832c7f0f881b324c1429f944384bd383db5",
+      "source": "himawari_metrics",
+      "date": "2026-11-09",
+      "batch_id": "20261109T101932Z_himawari_metrics_5c31fc"
+    },
+    {
+      "rel_path": "raw/himawari_metrics/date=2026-11-09/himawari_metrics_20261109_1620_20261109T164354Z_himawari_metrics_78d0ba.json",
+      "sha256": "0d6a200b8f2d8c7c4fc154a1cfb4eea3de08827751e96bca45ed1e7cf85c71d1",
+      "canonical_hash": "b10f433d4231911840f1c0fc097630da801451a69bc9a9128e264764a663eea9",
+      "source": "himawari_metrics",
+      "date": "2026-11-09",
+      "batch_id": "20261109T164354Z_himawari_metrics_78d0ba"
+    },
+    {
+      "rel_path": "raw/himawari_metrics/date=2026-11-10/himawari_metrics_20261110T171020Z_himawari_metrics_bed965.json",
+      "sha256": "5098987b6b2dae070409bfc0fd48cb668afaad6c6295afd83634f2b0f4daeff1",
+      "canonical_hash": "bda9d8d71fdd24143094b5e465bcb79533791abaa9d50e72904e82c9a5b741c9",
+      "source": "himawari_metrics",
+      "date": "2026-11-10",
+      "batch_id": "20261110T171020Z_himawari_metrics_bed965"
+    }
+  ],
+  "target_partitions_count": 6,
+  "target_shards_count": 6,
+  "replaced_compact_dir": null,
+  "active_layout": "daily_jsonl",
+  "report_path": "data/logs/migration_report_20261110T173400Z.json"
+}
