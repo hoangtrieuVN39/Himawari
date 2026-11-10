@@ -22,6 +22,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY config/ ./config/
 COPY src/ ./src/
+# Streamlit theme (light theme, colours) used by the dashboard service
+COPY .streamlit/ ./.streamlit/
 
 CMD ["python", "-m", "src.ingestion.run_ingest", "--loop"]
 
