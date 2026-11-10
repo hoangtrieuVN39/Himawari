@@ -1,8 +1,20 @@
 """Shared test fixtures for dashboard tests."""
 
 import shutil
+import sys
 from pathlib import Path
 import pytest
+
+
+@pytest.fixture(autouse=True)
+def _restore_main_module():
+    """AppTest runs its generated script as `__main__` and leaves it there; Windows multiprocessing
+    (spawn) later re-executes that script in child processes (NameError: __args) and breaks unrelated
+    tests such as tests/ingestion/test_raw_store.py::test_concurrent_multiprocess_writers."""
+    main = sys.modules.get("__main__")
+    yield
+    if main is not None:
+        sys.modules["__main__"] = main
 
 
 @pytest.fixture
