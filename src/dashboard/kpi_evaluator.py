@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from datetime import datetime, timezone
 import json
 from pathlib import Path
@@ -271,11 +272,25 @@ def load_kpi_trials(
     log_path: str = "data/logs/kpi_trials_log.jsonl",
     include_seeds: bool = True,
 ) -> list[dict[str, Any]]:
-    """Load KPI trials from jsonl log file."""
+    """Load KPI trials from jsonl log file (cached on the file signature; returns fresh dicts)."""
     path = Path(log_path)
-    if not path.exists():
+    try:
+        st = path.stat()
+    except OSError:
         return []
+    key = (str(path.resolve()), include_seeds)
+    sig = (st.st_mtime_ns, st.st_size)
+    hit = _TRIALS_CACHE.get(key)
+    if hit is None or hit[0] != sig:
+        hit = (sig, _read_kpi_trials(path, include_seeds))
+        _TRIALS_CACHE[key] = hit
+    return copy.deepcopy(hit[1])  # trials hold nested lists (failure_codes)
 
+
+_TRIALS_CACHE: dict[tuple[str, bool], tuple[tuple[int, int], list[dict[str, Any]]]] = {}
+
+
+def _read_kpi_trials(path: Path, include_seeds: bool) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     with open(path, "r", encoding="utf-8") as f:
         for line in f:

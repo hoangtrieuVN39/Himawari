@@ -313,11 +313,15 @@ def test_evaluate_kpi_submission_abandoned_and_failures(isolated_data):
 
 def test_seeded_kpi_trials_log_loads_and_meets_target(isolated_data):
     log_path = str(isolated_data / "logs" / "kpi_trials_log.jsonl")
-    trials = load_kpi_trials(log_path)
+    all_trials = load_kpi_trials(log_path)
+    # The live log also collects real trials over time; this test is about the 8 rehearsal seeds.
+    trials = [t for t in all_trials if t.get("is_sample_seed") is True]
     assert len(trials) == 8
 
     # Check non-seed filter
-    assert len(load_kpi_trials(log_path, include_seeds=False)) == 0
+    real = load_kpi_trials(log_path, include_seeds=False)
+    assert len(real) == len(all_trials) - 8
+    assert all(t.get("is_sample_seed") is not True for t in real)
 
     summary = compute_kpi_summary(trials)
     assert summary["baseline_3_sources"]["total_trials"] == 4

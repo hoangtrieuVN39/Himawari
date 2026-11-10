@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from datetime import datetime, timezone, timedelta
 import json
 from pathlib import Path
@@ -326,6 +327,19 @@ def _raw_input_signature(storage_root: str) -> tuple[tuple[str, int, int], ...]:
     return RawEnvelopeStore(storage_root=storage_root).signature()
 
 
+def has_unsynced_raw_data(storage_root: str = "data") -> bool:
+    """True when ingestion wrote raw files that the last decision-table sync has not seen.
+
+    Read-only and cheap (file signatures only): used by the LIVE watcher to offer a refresh without
+    changing the slot the user is looking at. False until a first sync has run in this process, and
+    after a sync dropped its cache entry, so False means "nothing known to be pending", NOT "up to date".
+    """
+    cached = _SYNC_CACHE.get(str(Path(storage_root).resolve()))
+    if cached is None:
+        return False
+    return _raw_input_signature(storage_root) != cached.get("input_sig")
+
+
 def sync_latest_raw_to_decision_table(
     storage_root: str = "data",
     force_latest: bool = False,
@@ -537,19 +551,47 @@ def normalize_timestamp_pair(ts_str: str | None, raw_ob: str | None = None) -> d
     }
 
 
+# Signature caches for the read-only loaders: every Streamlit rerun calls them, but the files only change
+# when ingestion/sync/pipeline writes. Key = (resolved path, mtime_ns, size) of every input file.
+_LOADER_CACHE: dict[str, tuple[Any, Any]] = {}
+
+
+def _file_signature(path: Path) -> tuple[str, int, int] | None:
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    return (str(path.resolve()), st.st_mtime_ns, st.st_size)
+
+
+def _cached(name: str, signature: Any, compute):
+    hit = _LOADER_CACHE.get(name)
+    if hit is not None and hit[0] == signature:
+        return hit[1]
+    value = compute()
+    _LOADER_CACHE[name] = (signature, value)
+    return value
+
+
 def load_decision_slots(storage_root: str = "data") -> dict[str, list[dict[str, Any]]]:
     """Load decision table from decision_table.jsonl and group by normalized UTC slot.
 
     Read-only: never modifies disk. Call sync_latest_raw_to_decision_table() first to fold
-    newer non-backfill raw batches into decision_table.jsonl.
+    newer non-backfill raw batches into decision_table.jsonl. Re-reads only when the file's
+    signature changes; callers get fresh dict copies so they cannot corrupt the cache.
 
     Returns:
         dict[utc_iso, list[row_dict]] where utc_iso is e.g. "2026-11-09T07:00:00Z"
     """
     path = Path(storage_root) / "processed" / "decision_table" / "decision_table.jsonl"
-    if not path.exists():
+    sig = _file_signature(path)
+    if sig is None:
         return {}
+    slots = _cached(f"slots:{sig[0]}", sig, lambda: _read_decision_slots(path))
+    return copy.deepcopy(slots)  # rows hold nested lists (weather codes, accepted airports)
 
+
+def _read_decision_slots(path: Path) -> dict[str, list[dict[str, Any]]]:
     slots: dict[str, list[dict[str, Any]]] = {}
 
     with open(path, "r", encoding="utf-8") as f:
@@ -672,7 +714,26 @@ def get_b13_image_sequence(
 
 
 def load_audit_and_reconciliation(storage_root: str = "data") -> dict[str, Any]:
-    """Load reconciliation summary, quarantine records, synthetic quarantine, and operational logs."""
+    """Load reconciliation summary, quarantine records, synthetic quarantine, and operational logs.
+
+    Cached on the signature of every input file; returns a deep copy.
+    """
+    root = Path(storage_root)
+    inputs = [
+        root / "processed" / "reconciliation" / "reconciliation_summary.json",
+        root / "processed" / "quarantine" / "quarantine_records.jsonl",
+        root / "logs" / "himawari_file_errors.jsonl",
+        root / "logs" / "ingestion_log.jsonl",
+        root / "logs" / "hdfs_sync_log.jsonl",
+    ]
+    syn_dir = root / "raw" / "synthetic_quarantine"
+    syn_files = sorted(syn_dir.glob("*.json")) if syn_dir.exists() else []
+    sig = tuple(_file_signature(p) for p in inputs + syn_files) + (len(syn_files),)
+    value = _cached(f"audit:{root.resolve()}", sig, lambda: _read_audit_and_reconciliation(storage_root))
+    return copy.deepcopy(value)
+
+
+def _read_audit_and_reconciliation(storage_root: str) -> dict[str, Any]:
     root = Path(storage_root)
 
     # 1. Reconciliation summary
