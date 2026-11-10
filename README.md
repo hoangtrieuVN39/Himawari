@@ -64,16 +64,36 @@ Backfill toàn bộ các khung thời gian 10 phút trong khoảng thời gian x
 ```bash
 .venv\Scripts\python.exe -m src.ingestion.run_ingest --sync-hdfs
 ```
-Kết quả đo thông lượng và số tệp đồng bộ sẽ được ghi vào `data/logs/hdfs_sync_log.jsonl`.
+Cơ chế HDFS Sync tự động nhận biết layout hoạt động (`daily_jsonl` hoặc `legacy_files`), chụp snapshot dưới khóa tiến trình, so khớp mã băm SHA-256 qua manifest `data/logs/hdfs_sync_manifest.json` để bỏ qua các tệp không thay đổi (`files_skipped_unchanged`), và chỉ chuyển đổi remote marker `storage_state.json` sau khi hoàn tất 100% upload dữ liệu. Kết quả đo thông lượng và số tệp đồng bộ sẽ được ghi vào `data/logs/hdfs_sync_log.jsonl`.
 
-### 5. Thử nghiệm Phát hiện và Cách ly Tệp Hỏng (Synthetic Corrupt Test)
+### 5. Quản lý và Chuyển đổi Lưu trữ Thu gọn (Compact Raw Storage Migration)
+Chuyển đổi các tệp JSON đơn lẻ rời rạc sang tệp gộp theo ngày `batches-0001.jsonl` (tự chia shard khi vượt ngưỡng 64 MiB), đối chiếu đa tập hợp mã băm Canonical SHA-256 và giải phóng inode đĩa:
+```bash
+# Bước 1: Kiểm tra tính toàn vẹn và dự báo số lượng tệp gom (chỉ đọc, không sửa đổi đĩa)
+.venv\Scripts\python.exe -m src.ingestion.migrate_storage --base-dir data --dry-run
+
+# Bước 2: Thực hiện chuyển đổi và kích hoạt layout mới (daily_jsonl)
+.venv\Scripts\python.exe -m src.ingestion.migrate_storage --base-dir data --apply
+
+# Bước 3: Đóng gói toàn bộ JSON cũ vào raw-json-before-migration.zip, xác thực SHA-256 rồi dọn tệp cũ
+.venv\Scripts\python.exe -m src.ingestion.migrate_storage --base-dir data --prune-legacy
+
+# (Tùy chọn) Khôi phục lại trạng thái tệp rời nếu cần thiết (tự bảo tồn các batch mới sinh sau cutover)
+.venv\Scripts\python.exe -m src.ingestion.migrate_storage --base-dir data --rollback
+
+# (Tùy chọn) Kiểm tra mọi batch đã migrate vẫn còn trong raw_compact
+.venv\Scripts\python.exe -m src.ingestion.migrate_storage --base-dir data --verify
+```
+Chạy lại `--apply` sau khi đã kích hoạt là no-op (`ALREADY_ACTIVE`); `--prune-legacy` chỉ xóa tệp chưa bị sửa kể từ lúc migrate. Báo cáo lưu ở `data/logs/migration_report_<timestamp>.json`.
+
+### 6. Thử nghiệm Phát hiện và Cách ly Tệp Hỏng (Synthetic Corrupt Test)
 Sinh tệp giả lập bị hỏng nhãn chuẩn để kiểm tra tính năng tự phòng vệ:
 ```bash
 .venv\Scripts\python.exe -m src.ingestion.run_ingest --inject-corrupt-test
 ```
 Xem nhật ký phát hiện tại `data/logs/himawari_file_errors.jsonl`.
 
-### 6. Bật Chế độ Thu thập Ngầm Liên tục (Daemon Mode)
+### 7. Bật Chế độ Thu thập Ngầm Liên tục (Daemon Mode)
 - **Trên Windows (1 chạm):** Click đúp chuột vào tệp `run_daemon.bat` (đã tích hợp tự động thu thập vệ tinh Himawari-9 mỗi 10 phút).
 - **Hoặc chạy dòng lệnh:**
   ```bash
@@ -85,7 +105,7 @@ Xem nhật ký phát hiện tại `data/logs/himawari_file_errors.jsonl`.
   docker compose logs -f ingestor
   ```
 
-### 7. Chạy Pipeline PySpark & Động cơ Phân cấp Ưu tiên (Mô-đun 3)
+### 8. Chạy Pipeline PySpark & Động cơ Phân cấp Ưu tiên (Mô-đun 3)
 Chạy pipeline phân tích dữ liệu, đối soát và sinh bảng quyết định:
 - **Chế độ Replay lịch sử (ví dụ các mốc 14:00 và 15:00 UTC):**
   ```bash
@@ -95,12 +115,14 @@ Chạy pipeline phân tích dữ liệu, đối soát và sinh bảng quyết đ
   ```bash
   .venv\Scripts\python.exe -m src.spark.run_pipeline --storage-root data --mode live
   ```
+- **`--review-slots auto` (mặc định):** gộp các mốc replay chuẩn `07:00Z`, `08:00Z`, `11:00Z` với mốc METAR live mới nhất đang có trên đĩa. Pipeline chỉ đọc layout đang active (`daily_jsonl` hoặc `legacy_files`), không bao giờ gộp cả hai.
+- **Lưu ý hiệu năng:** trên Windows mỗi lần chạy pipeline Spark mất khoảng 2 phút (khởi động JVM + nhiều job), nên bộ test `tests/spark` chạy lâu; đây không phải treo.
 - **Kiểm thử cách ly bản ghi hỏng (Synthetic Quarantine Test):**
   ```bash
   .venv\Scripts\python.exe -m src.spark.run_pipeline --inject-quarantine-test
   ```
 
-### 8. Khởi chạy Giao diện Dashboard Streamlit (Mô-đun 4)
+### 9. Khởi chạy Giao diện Dashboard Streamlit (Mô-đun 4)
 - **Cách 1: Khởi chạy 1 chạm trên Windows:**
   Click đúp vào file `run_dashboard.bat` trong thư mục gốc dự án.
 - **Cách 2: Khởi chạy bằng dòng lệnh (.venv):**
@@ -113,9 +135,9 @@ Chạy pipeline phân tích dữ liệu, đối soát và sinh bảng quyết đ
   ```
   Truy cập giao diện tại: `http://localhost:8501`.
 
-### 9. Chạy Toàn bộ Bộ Kiểm thử Tự động (Unit & Integration Tests)
+### 10. Chạy Toàn bộ Bộ Kiểm thử Tự động (Unit & Integration Tests)
 ```bash
-.venv\Scripts\pytest.exe tests/ -v
+.venv\Scripts\pytest.exe -q
 ```
 
 ---
