@@ -15,7 +15,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
 
-from src.ingestion.storage import save_raw_envelope, append_ingestion_log
+from src.ingestion.storage import append_ingestion_log
+from src.ingestion.raw_store import RawEnvelopeStore
 
 # Physical constants and thresholds
 MIN_VALID_BT_K = 150.0
@@ -557,15 +558,14 @@ def process_himawari_slot(
         "airports": airport_results,
     }
 
-    metrics_filename = f"himawari_metrics_{compact_slot}_{batch_id}.json"
-    raw_dir = str(Path(base_dir) / "raw")
-    saved_path = save_raw_envelope(
+    store = RawEnvelopeStore(storage_root=base_dir)
+    receipt = store.write(
         source="himawari_metrics",
         date_str=date_str,
-        filename=metrics_filename,
         envelope=envelope,
-        base_dir=raw_dir,
     )
-    envelope["metadata"]["saved_path"] = saved_path
+    envelope["metadata"]["saved_path"] = receipt.path
+    envelope["metadata"]["bytes_written"] = receipt.bytes_added
+    envelope["metadata"]["storage_layout"] = store.active_layout()
 
     return envelope

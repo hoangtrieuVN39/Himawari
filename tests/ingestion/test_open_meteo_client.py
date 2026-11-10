@@ -82,3 +82,29 @@ def test_ingest_open_meteo_failure(tmp_path, mocker):
     assert log_entry["status"] == "FAILED"
     assert log_entry["error_type"] == "Exception"
 
+
+def test_open_meteo_batches_share_daily_file(tmp_path, mocker):
+    mock_fetch = mocker.patch("src.ingestion.open_meteo_client.fetch_with_retry")
+    mock_resp = Mock()
+    mock_resp.status_code = 200
+    mock_resp.url = "https://api.open-meteo.com/v1/forecast"
+    mock_resp.json.return_value = {"hourly": {"time": ["2026-11-09T08:00"]}}
+    mock_fetch.return_value = mock_resp
+
+    airports_cfg = {
+        "VVDN": {"icao": "VVDN", "name": "Da Nang", "latitude": 16.0, "longitude": 108.0},
+        "VVNB": {"icao": "VVNB", "name": "Noi Bai", "latitude": 21.0, "longitude": 105.0},
+    }
+
+    results = ingest_open_meteo(airports_cfg, expected_slot_utc="2026-11-09T08:00:00Z", base_dir=str(tmp_path))
+    assert len(results) == 2
+    assert results[0]["status"] == "SUCCESS"
+    assert results[1]["status"] == "SUCCESS"
+    assert results[0]["file_path"] == results[1]["file_path"]
+    assert results[0]["storage_layout"] == "daily_jsonl"
+
+    from src.ingestion.raw_store import RawEnvelopeStore
+    store = RawEnvelopeStore(str(tmp_path))
+    envelopes = list(store.iter_envelopes("open_meteo"))
+    assert len(envelopes) == 2
+

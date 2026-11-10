@@ -162,12 +162,14 @@ def test_process_himawari_slot_success(tmp_path):
     assert vvts["status"] == "MISSING_SEGMENT"
     assert vvts["b13_valid_fraction"] == 0.0
 
-    # Verify metrics JSON envelope is saved in <tmp_path>/raw/himawari_metrics/date=2026-11-09/
-    metrics_dir = tmp_path / "raw" / "himawari_metrics" / "date=2026-11-09"
-    assert metrics_dir.exists()
-    metric_files = list(metrics_dir.glob("*.json"))
-    assert len(metric_files) == 1
-    assert "20261109_0800" in metric_files[0].name
+    # Verify metrics envelope is saved via RawEnvelopeStore
+    saved_metrics = Path(res["metadata"]["saved_path"])
+    assert saved_metrics.exists()
+    from src.ingestion.raw_store import RawEnvelopeStore
+    store = RawEnvelopeStore(str(tmp_path))
+    envelopes = list(store.iter_envelopes("himawari_metrics"))
+    assert len(envelopes) == 1
+    assert envelopes[0]["metadata"]["scan_slot_utc"] == "2026-11-09T08:00:00Z"
 
 
 def test_process_himawari_slot_handles_corrupt_segment(tmp_path):

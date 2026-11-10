@@ -1,11 +1,11 @@
-import os
-import uuid
+﻿import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
 from src.ingestion.http_client import fetch_with_retry
-from src.ingestion.storage import save_raw_envelope, append_ingestion_log
+from src.ingestion.storage import append_ingestion_log
+from src.ingestion.raw_store import RawEnvelopeStore
 
 METAR_API_BASE_URL = "https://aviationweather.gov/api/data/metar"
 METAR_ATTRIBUTION = "NOAA/NWS Aviation Weather Center (https://aviationweather.gov/data/api/)"
@@ -39,7 +39,6 @@ def ingest_metar(
     }
 
     log_path = str(Path(base_dir) / "logs" / "ingestion_log.jsonl")
-    raw_dir = str(Path(base_dir) / "raw")
 
     try:
         response = fetch_with_retry(METAR_API_BASE_URL, params=params)
@@ -48,7 +47,6 @@ def ingest_metar(
             payload = [payload] if payload else []
 
         record_count = len(payload)
-        filename = f"metar_{batch_id}.json"
 
         envelope = {
             "metadata": {
@@ -66,15 +64,16 @@ def ingest_metar(
             "payload": payload
         }
 
-        saved_path = save_raw_envelope(
+        store = RawEnvelopeStore(storage_root=base_dir)
+        receipt = store.write(
             source="metar",
             date_str=date_str,
-            filename=filename,
             envelope=envelope,
-            base_dir=raw_dir
         )
 
-        bytes_written = os.path.getsize(saved_path)
+        saved_path = receipt.path
+        bytes_written = receipt.bytes_added
+        storage_layout = store.active_layout()
 
         log_entry = {
             "batch_id": batch_id,
@@ -87,6 +86,7 @@ def ingest_metar(
             "record_count": record_count,
             "bytes_written": bytes_written,
             "file_path": saved_path,
+            "storage_layout": storage_layout,
             "is_backfill": is_backfill,
             "error_type": None,
             "error_message": None

@@ -1,11 +1,11 @@
-import os
-import uuid
+﻿import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
 from src.ingestion.http_client import fetch_with_retry
-from src.ingestion.storage import save_raw_envelope, append_ingestion_log
+from src.ingestion.storage import append_ingestion_log
+from src.ingestion.raw_store import RawEnvelopeStore
 
 OPEN_METEO_BASE_URL = "https://api.open-meteo.com/v1/forecast"
 OPEN_METEO_ATTRIBUTION = "Weather data by Open-Meteo.com (https://open-meteo.com/)"
@@ -28,7 +28,6 @@ def ingest_open_meteo(
         expected_slot_utc = now_iso
 
     log_path = str(Path(base_dir) / "logs" / "ingestion_log.jsonl")
-    raw_dir = str(Path(base_dir) / "raw")
     results: List[Dict[str, Any]] = []
 
     for icao, airport in airports_config.items():
@@ -52,8 +51,6 @@ def ingest_open_meteo(
             hourly_data = payload.get("hourly", {})
             forecast_hours_count = len(hourly_data.get("time", []))
 
-            filename = f"open_meteo_{icao_clean}_{batch_id}.json"
-
             envelope = {
                 "metadata": {
                     "batch_id": batch_id,
@@ -72,15 +69,16 @@ def ingest_open_meteo(
                 "payload": payload
             }
 
-            saved_path = save_raw_envelope(
+            store = RawEnvelopeStore(storage_root=base_dir)
+            receipt = store.write(
                 source="open_meteo",
                 date_str=date_str,
-                filename=filename,
                 envelope=envelope,
-                base_dir=raw_dir
             )
 
-            bytes_written = os.path.getsize(saved_path)
+            saved_path = receipt.path
+            bytes_written = receipt.bytes_added
+            storage_layout = store.active_layout()
 
             log_entry = {
                 "batch_id": batch_id,
@@ -93,6 +91,7 @@ def ingest_open_meteo(
                 "record_count": forecast_hours_count,
                 "bytes_written": bytes_written,
                 "file_path": saved_path,
+                "storage_layout": storage_layout,
                 "is_backfill": False,
                 "error_type": None,
                 "error_message": None
