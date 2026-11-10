@@ -245,3 +245,37 @@ def test_concurrent_multiprocess_writers(tmp_path: Path):
     envelopes = list(store.iter_envelopes("metar", date_str=date_str))
     assert len(envelopes) == num_workers * batches_per_worker
 
+
+
+def test_write_does_not_parse_shards_lacking_the_batch_id(tmp_path: Path, monkeypatch):
+    """Idempotency check must be a cheap byte pre-check: unrelated shards are never JSON-parsed."""
+    store = RawEnvelopeStore(storage_root=str(tmp_path), shard_max_bytes=700)
+    date_str = "2026-11-10"
+    for i in range(1, 6):
+        store.write("metar", date_str, _make_envelope("metar", f"b{i}", {"data": "x" * 200}))
+
+    parsed = []
+    original = RawEnvelopeStore._iter_jsonl_file
+
+    def spy(self, shard_path, strict=True):
+        parsed.append(shard_path.name)
+        return original(self, shard_path, strict)
+
+    monkeypatch.setattr(RawEnvelopeStore, "_iter_jsonl_file", spy)
+    receipt = store.write("metar", date_str, _make_envelope("metar", "brand_new", {"data": "y"}))
+
+    assert receipt.inserted is True
+    assert parsed == []
+
+
+def test_write_still_detects_duplicate_and_conflict_across_shards(tmp_path: Path):
+    store = RawEnvelopeStore(storage_root=str(tmp_path), shard_max_bytes=700)
+    date_str = "2026-11-10"
+    for i in range(1, 6):
+        store.write("metar", date_str, _make_envelope("metar", f"b{i}", {"data": "x" * 200}))
+
+    # b1 lives in the first shard, not the latest one
+    assert store.write("metar", date_str, _make_envelope("metar", "b1", {"data": "x" * 200})).inserted is False
+    with pytest.raises(BatchConflictError):
+        store.write("metar", date_str, _make_envelope("metar", "b1", {"data": "different"}))
+    assert len(list(store.iter_envelopes("metar", date_str=date_str))) == 5

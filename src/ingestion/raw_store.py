@@ -243,10 +243,19 @@ class RawEnvelopeStore:
         line_bytes = line_str.encode("utf-8")
         line_len = len(line_bytes)
 
-        # 1. Scan existing shards in partition to check idempotency and pick target shard
-        existing_shards = sorted(target_dir.glob("batches-*.jsonl"))
-        
+        # 1. Check idempotency. Each shard is read once; JSON is only parsed when the shard bytes
+        #    contain the serialized batch_id (cheap pre-check), then confirmed precisely.
+        existing_shards = sorted(
+            p for p in target_dir.glob("batches-*.jsonl") if not is_temp_file(p.name)
+        )
+        batch_id_token = json.dumps(batch_id, ensure_ascii=False).encode("utf-8")
+        shard_bytes: Dict[Path, bytes] = {}
+
         for shard in existing_shards:
+            data = shard.read_bytes()
+            shard_bytes[shard] = data
+            if batch_id_token not in data:
+                continue
             for existing_env in self._iter_jsonl_file(shard, strict=False):
                 meta = existing_env.get("metadata") or {}
                 if meta.get("batch_id") == batch_id:
@@ -258,31 +267,30 @@ class RawEnvelopeStore:
                             bytes_added=0,
                             inserted=False,
                             shard_index=self._extract_shard_index(shard.name),
-                            total_shard_bytes=shard.stat().st_size,
+                            total_shard_bytes=len(data),
                         )
                     else:
                         raise BatchConflictError(
                             f"Batch '{batch_id}' already exists in {shard.name} with different payload"
                         )
 
-        # 2. Determine shard rollover
+        # 2. Determine shard rollover (reuse the bytes already read)
         if not existing_shards:
             shard_idx = 1
             target_shard = target_dir / f"batches-{shard_idx:04d}.jsonl"
             shard_existing_bytes = b""
         else:
             latest_shard = existing_shards[-1]
-            curr_size = latest_shard.stat().st_size
+            latest_bytes = shard_bytes[latest_shard]
             shard_idx = self._extract_shard_index(latest_shard.name)
 
-            if curr_size + line_len > self.shard_max_bytes and curr_size > 0:
+            if len(latest_bytes) + line_len > self.shard_max_bytes and len(latest_bytes) > 0:
                 shard_idx += 1
                 target_shard = target_dir / f"batches-{shard_idx:04d}.jsonl"
                 shard_existing_bytes = b""
             else:
                 target_shard = latest_shard
-                with open(target_shard, "rb") as f:
-                    shard_existing_bytes = f.read()
+                shard_existing_bytes = latest_bytes
 
         # 3. Snapshot rewrite via temp file
         atomic_write_bytes(target_shard, shard_existing_bytes + line_bytes)
