@@ -7,10 +7,10 @@ from src.spark.quarantine import (
     validate_and_split_metar,
     validate_and_split_open_meteo,
 )
-from src.spark.readers import (
-    read_raw_himawari_metrics,
-    read_raw_metar,
-    read_raw_open_meteo,
+from tests.spark.real_data import (
+    real_raw_himawari_metrics,
+    real_raw_metar,
+    real_raw_open_meteo,
 )
 
 

@@ -1,10 +1,11 @@
 """Unit tests for strict schemas and raw envelope readers."""
 
 from pyspark.sql import SparkSession
-from src.spark.readers import (
-    read_raw_himawari_metrics,
-    read_raw_metar,
-    read_raw_open_meteo,
+from src.spark.readers import read_raw_metar
+from tests.spark.real_data import (
+    real_raw_himawari_metrics,
+    real_raw_metar,
+    real_raw_open_meteo,
 )
 
 
