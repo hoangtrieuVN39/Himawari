@@ -18,17 +18,16 @@ def build_point_in_time_snapshot(
     """Performs strict point-in-time temporal join using fast HashJoins and pre-filtering."""
     airport_list = airports or VALID_AIRPORTS
 
-    # 1. Fixed Spine: Exactly len(airports) rows per review slot
-    slot_rows = [(slot,) for slot in review_slots_utc]
-    slots_df = spark.createDataFrame(slot_rows, ["review_slot_str"]).withColumn(
-        "review_slot_utc", F.to_timestamp(F.col("review_slot_str"))
+    # 1. Fixed Spine: exactly len(airports) rows per review slot. Built from literals inside the JVM:
+    # createDataFrame(list) would make a Python RDD, and every stage reading the spine would then spawn
+    # Python workers (minutes per run on Windows) even though the pipeline has no Python UDFs.
+    spine_df = (
+        spark.range(1)
+        .select(F.explode(F.array(*[F.lit(s) for s in review_slots_utc])).alias("review_slot_str"))
+        .select(F.to_timestamp("review_slot_str").alias("review_slot_utc"))
+        .crossJoin(spark.range(1).select(F.explode(F.array(*[F.lit(a) for a in airport_list])).alias("airport_icao")))
+        .select("review_slot_utc", "airport_icao")
     )
-
-    airport_rows = [(icao,) for icao in airport_list]
-    airports_df = spark.createDataFrame(airport_rows, ["airport_icao"])
-    spine_df = slots_df.crossJoin(airports_df).select("review_slot_utc", "airport_icao")
-
-    max_slot = max(review_slots_utc)
 
     # 2. METAR Join
     m_src = metar_df.select(
@@ -105,14 +104,10 @@ def build_point_in_time_snapshot(
         ),
         how="left",
     )
-    cond_f = (
-        (F.col("forecast_fetched_at_utc") <= F.col("review_slot_utc"))
-        if mode == "live"
-        else (
-            (F.col("forecast_fetched_at_utc") <= F.col("review_slot_utc"))
-            | (F.col("forecast_is_backfill") == True)
-        )
-    )
+    # A forecast is usable only if it was fetched by the review slot, in BOTH modes: a forecast
+    # fetched later comes from a newer model run and would leak future skill into a replay. Missing
+    # forecasts stay missing (shown as "dự báo khuyết") instead of being back-filled.
+    cond_f = F.col("forecast_fetched_at_utc") <= F.col("review_slot_utc")
     val_f = matched_f.filter(cond_f | F.col("forecast_valid_at_utc").isNull())
     w_f = Window.partitionBy("review_slot_utc", "airport_icao").orderBy(
         F.col("forecast_fetched_at_utc").desc_nulls_last()
@@ -159,17 +154,20 @@ def build_point_in_time_snapshot(
     latest_hima = (
         val_h.withColumn("h_rank", F.row_number().over(w_h))
         .filter(F.col("h_rank") == 1)
-        .drop("h_rank", "h_icao", "hima_fetched_at_utc")
+        .drop("h_rank", "h_icao")
+        .withColumnRenamed("hima_fetched_at_utc", "b13_fetched_at_utc")
         .withColumn("b13_is_present", F.col("latest_b13_scan_time_utc").isNotNull())
     )
 
-    # 5. Join all 3 enriched sources onto spine
+    # 5. Join all 3 enriched sources onto the fixed spine: every slot keeps exactly one row per
+    # airport even when a source has no usable record at that slot.
     full_snapshot = (
-        deduped_metar
+        spine_df
+        .join(deduped_metar, on=["review_slot_utc", "airport_icao"], how="left")
         .join(deduped_forecast, on=["review_slot_utc", "airport_icao"], how="left")
         .join(latest_hima, on=["review_slot_utc", "airport_icao"], how="left")
     )
-
-    return full_snapshot
+    for flag in ("metar_is_present", "forecast_is_present", "b13_is_present"):
+        full_snapshot = full_snapshot.withColumn(flag, F.coalesce(F.col(flag), F.lit(False)))
 
     return full_snapshot

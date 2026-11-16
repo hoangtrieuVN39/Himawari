@@ -1,6 +1,7 @@
 """Unit tests for point-in-time temporal join and future data leakage prevention."""
 
 from pyspark.sql import SparkSession
+from src.ingestion.raw_store import RawEnvelopeStore
 from src.spark.quarantine import (
     validate_and_split_himawari,
     validate_and_split_metar,
@@ -15,10 +16,19 @@ from src.spark.temporal_join import build_point_in_time_snapshot
 from src.spark.transforms import enrich_valid_himawari, enrich_valid_metar
 
 
+def _active_paths(source: str) -> tuple[list[str], bool]:
+    spec = RawEnvelopeStore(storage_root="data").read_specs(source)[0]
+    return list(spec.paths), spec.multiline
+
+
 def test_point_in_time_no_future_leakage_and_3_airport_spine(spark: SparkSession):
-    raw_m = read_raw_metar(spark, "data/raw/metar/date=2026-11-09/*.json")
-    raw_f = read_raw_open_meteo(spark, "data/raw/open_meteo/date=2026-11-09/*.json")
-    raw_h = read_raw_himawari_metrics(spark, "data/raw/himawari_metrics/date=2026-11-09/*.json")
+    # Reads the active Bronze layout (legacy raw/*.json files were pruned after the daily_jsonl migration)
+    m_paths, m_multiline = _active_paths("metar")
+    f_paths, f_multiline = _active_paths("open_meteo")
+    h_paths, h_multiline = _active_paths("himawari_metrics")
+    raw_m = read_raw_metar(spark, m_paths, multiline=m_multiline)
+    raw_f = read_raw_open_meteo(spark, f_paths, multiline=f_multiline)
+    raw_h = read_raw_himawari_metrics(spark, h_paths, multiline=h_multiline)
 
     valid_m, _, _ = validate_and_split_metar(raw_m)
     valid_f, _, _ = validate_and_split_open_meteo(raw_f)

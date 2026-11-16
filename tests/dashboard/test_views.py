@@ -46,7 +46,7 @@ def test_live_mode_sidebar_header_and_admin_area(at):
     html = _html(at)
     assert "Điều phối Thời tiết" in html and "ĐIỀU PHỐI" in html
     assert "mode-live" in html  # header pill
-    assert [t.label for t in at.tabs] == ["Quyết định", "Đo KPI", "Đối soát dữ liệu"]
+    assert [t.label for t in at.tabs] == ["Quyết định", "Đo KPI", "Đối soát dữ liệu", "Sức khỏe hệ thống"]
     labels = [b.label for b in at.button]
     assert "Cập nhật dữ liệu realtime" in labels and "Chạy lại pipeline PySpark" in labels
     admin = next(e for e in at.sidebar.expander if e.label == "Quản trị kỹ thuật")
@@ -179,7 +179,7 @@ def _captions(at) -> str:
 def test_live_watcher_states(at, monkeypatch):
     from src.dashboard import app
 
-    monkeypatch.setattr(app, "has_unsynced_raw_data", lambda root: False)
+    monkeypatch.setattr(app, "has_new_decision_version", lambda root: False)
     at.run()
     assert not at.exception
     assert "Tự kiểm tra dữ liệu mới mỗi 60 giây" in _captions(at)
@@ -200,7 +200,7 @@ def test_live_watcher_states(at, monkeypatch):
 def test_live_watcher_offers_refresh_and_jumps_to_newest_slot(at, monkeypatch):
     from src.dashboard import app, data_loader
 
-    monkeypatch.setattr(app, "has_unsynced_raw_data", lambda root: True)
+    monkeypatch.setattr(app, "has_new_decision_version", lambda root: True)
     at.run()
     assert any("Có dữ liệu mới" in i.value for i in at.sidebar.info)
     newest = max(data_loader.load_decision_slots(app.STORAGE_ROOT))  # STORAGE_ROOT = isolated copy after run

@@ -1,31 +1,25 @@
-"""Signature-based caching of dashboard loaders: no re-read while files are unchanged."""
+"""Signature-based caching of dashboard loaders: no re-read while inputs are unchanged."""
 
 import json
-import os
-import time
 
 from src.dashboard import data_loader as dl
 from src.dashboard import kpi_evaluator as ke
+from tests.dashboard.lake_fixtures import write_lake_version
+
+_RUN_IDS = iter(f"20261109T07{m:02d}00000000Z" for m in range(60))
 
 
 def _write_decision(root, rows):
-    path = root / "processed" / "decision_table" / "decision_table.jsonl"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
-    return path
+    """Commits `rows` as a new Gold decision_table version (newer than any previous call)."""
+    return write_lake_version(root, "decision_table", rows, run_id=next(_RUN_IDS))
 
 
 def _row(icao, level=4, slot="2026-11-09T07:00:00Z"):
     return {"review_slot_utc": slot, "observed_at_utc": slot, "airport_icao": icao, "priority_level": level}
 
 
-def _bump(path):
-    st = path.stat()
-    os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns + 1_000_000_000))
-
-
-def test_decision_slots_cached_until_file_changes(tmp_path, monkeypatch):
-    path = _write_decision(tmp_path, [_row("VVDN", 1), _row("VVNB")])
+def test_decision_slots_cached_until_a_new_version_is_committed(tmp_path, monkeypatch):
+    _write_decision(tmp_path, [_row("VVDN", 1), _row("VVNB")])
     calls = []
     real = dl._read_decision_slots
     monkeypatch.setattr(dl, "_read_decision_slots", lambda p: calls.append(p) or real(p))
@@ -35,7 +29,6 @@ def test_decision_slots_cached_until_file_changes(tmp_path, monkeypatch):
     assert len(calls) == 1 and first == second
 
     _write_decision(tmp_path, [_row("VVDN", 1), _row("VVNB"), _row("VVTS")])
-    _bump(path)
     third = dl.load_decision_slots(str(tmp_path))
     assert len(calls) == 2
     assert len(third["2026-11-09T07:00:00Z"]) == 3
@@ -97,18 +90,20 @@ def test_audit_cached_until_any_input_changes(tmp_path, monkeypatch):
     assert dl.load_audit_and_reconciliation(str(tmp_path))["ingestion_summary"]["total_bytes"] == 15
 
 
-def test_has_unsynced_raw_data_compares_signature_without_writing(tmp_path, monkeypatch):
-    key = str(tmp_path.resolve())
-    sig = {"v": (("a.json", 1, 10),)}
-    monkeypatch.setattr(dl, "_raw_input_signature", lambda root: sig["v"])
-
-    assert dl.has_unsynced_raw_data(str(tmp_path)) is False  # nothing synced yet: next full run syncs
-    monkeypatch.setitem(dl._SYNC_CACHE, key, {"input_sig": sig["v"], "dec_sig": (0, 0)})
-    assert dl.has_unsynced_raw_data(str(tmp_path)) is False
-    sig["v"] = (("a.json", 1, 10), ("b.json", 2, 20))  # ingestion wrote a new raw batch
-    assert dl.has_unsynced_raw_data(str(tmp_path)) is True
-    monkeypatch.setitem(dl._SYNC_CACHE, key, {"input_sig": sig["v"], "dec_sig": (0, 0)})  # a sync caught up
-    assert dl.has_unsynced_raw_data(str(tmp_path)) is False
+def test_audit_reads_reconciliation_and_quarantine_from_lake(tmp_path):
+    write_lake_version(tmp_path, "reconciliation", [
+        {"run_id": "r1", "generated_at_utc": "2026-11-09T08:00:00Z", "all_sources_reconciled": True,
+         "source": "metar", "rows_read": 5, "rows_quarantined": 1, "rows_valid_pre_dedup": 4,
+         "rows_retained_valid": 3, "rows_duplicate_dropped": 1, "is_reconciled": True,
+         "binary_errors_total": 2, "binary_errors_synthetic": 1, "binary_errors_log_path": "x.jsonl"},
+    ])
+    write_lake_version(tmp_path, "quarantine", [{"source": "metar", "error_codes": ["UNKNOWN_AIRPORT"]}])
+    audit = dl.load_audit_and_reconciliation(str(tmp_path))
+    rec = audit["reconciliation"]
+    assert rec["all_sources_reconciled"] is True
+    assert rec["sources"][0]["rows_read"] == rec["sources"][0]["rows_valid_pre_dedup"] + 1
+    assert rec["binary_file_errors"] == {"total_count": 2, "synthetic_count": 1, "log_path": "x.jsonl"}
+    assert audit["quarantine_records"] == [{"source": "metar", "error_codes": ["UNKNOWN_AIRPORT"]}]
 
 
 def test_kpi_trials_cached_and_refreshed_after_append(tmp_path, monkeypatch):

@@ -154,7 +154,6 @@ def render_sidebar(
             selected = st.selectbox(
                 "Mốc thời gian",
                 options=available_slots,
-                index=len(available_slots) - 1,
                 format_func=lambda s: _slot_label(s, slots, slot_hhmm),
                 key="slot_live",
             )
@@ -168,7 +167,6 @@ def render_sidebar(
             selected = st.selectbox(
                 "Mốc thời gian",
                 options=options,
-                index=0,
                 format_func=lambda s: _slot_label(s, slots, slot_hhmm),
                 key="slot_replay",
             )

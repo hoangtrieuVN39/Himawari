@@ -33,10 +33,11 @@ def test_inactive_tabs_render_no_elements(app_test):
     at = app_test.run()
     assert not at.exception
     tabs = list(at.tabs)
-    assert len(tabs) == 3
+    assert len(tabs) == 4
     assert _count(tabs[0]) > 0, "selected tab must render"
     assert _count(tabs[1]) == 0, "inactive KPI tab must not be computed"
     assert _count(tabs[2]) == 0, "inactive audit tab must not be computed"
+    assert _count(tabs[3]) == 0, "inactive health tab must not be computed"
 
 
 def test_selecting_kpi_tab_renders_only_that_tab(app_test):
@@ -48,7 +49,7 @@ def test_selecting_kpi_tab_renders_only_that_tab(app_test):
     tabs = list(at.tabs)
     assert _count(tabs[1]) > 0, "selected KPI tab must render"
     assert _count(tabs[0]) == 0, "previously selected tab must no longer be computed"
-    assert _count(tabs[2]) == 0
+    assert _count(tabs[2]) == 0 and _count(tabs[3]) == 0
 
 
 def test_make_tabs_falls_back_when_streamlit_has_no_lazy_tabs():

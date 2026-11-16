@@ -10,6 +10,23 @@ from src.ingestion.raw_store import RawEnvelopeStore
 METAR_API_BASE_URL = "https://aviationweather.gov/api/data/metar"
 METAR_ATTRIBUTION = "NOAA/NWS Aviation Weather Center (https://aviationweather.gov/data/api/)"
 
+# AWC API limits (https://aviationweather.gov/data/api/): max 400 entries per request, 30 days of history.
+METAR_MAX_ENTRIES_PER_REQUEST = 400
+METAR_RETENTION_DAYS = 30
+
+
+def parse_metar_payload(response: Any) -> List[Dict[str, Any]]:
+    """Decodes an AWC METAR response into a list of observations.
+
+    HTTP 204 (or an empty body) means "no data for this query": returns [] instead of raising.
+    """
+    if getattr(response, "status_code", None) == 204 or not getattr(response, "content", b"1"):
+        return []
+    payload = response.json()
+    if not isinstance(payload, list):
+        payload = [payload] if payload else []
+    return payload
+
 def ingest_metar(
     airports: List[str],
     hours: int = 2,
@@ -42,9 +59,7 @@ def ingest_metar(
 
     try:
         response = fetch_with_retry(METAR_API_BASE_URL, params=params)
-        payload = response.json()
-        if not isinstance(payload, list):
-            payload = [payload] if payload else []
+        payload = parse_metar_payload(response)
 
         record_count = len(payload)
 

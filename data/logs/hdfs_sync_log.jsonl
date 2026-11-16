@@ -1,0 +1,1 @@
+{"timestamp_utc": "2026-11-10T19:38:30.513327+00:00", "status": "SUCCESS", "files_uploaded": 49, "files_skipped_unchanged": 0, "total_bytes": 16621203, "elapsed_ms": 18392.34, "throughput_mb_s": 0.8618, "local_dir": "data", "hdfs_root": "/data", "errors": []}

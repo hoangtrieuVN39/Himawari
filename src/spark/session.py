@@ -1,7 +1,11 @@
 """SparkSession factory with UTC session timezone and dual HDFS/local support."""
 
 import os
+import sys
+from pathlib import Path
 from pyspark.sql import SparkSession
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 
 _SPARK_INSTANCE: SparkSession | None = None
 
@@ -27,22 +31,18 @@ def get_spark_session(
         except Exception:
             pass
 
-    import sys
-
     os.environ.setdefault("SPARK_LOCAL_IP", "127.0.0.1")
-    python_path = sys.executable
-    if os.path.exists(r"Z:\.venv\Scripts\python.exe"):
-        python_path = r"Z:\.venv\Scripts\python.exe"
-        os.environ["SPARK_HOME"] = r"Z:\.venv\Lib\site-packages\pyspark"
-        if os.path.exists(r"Z:\config\hadoop"):
-            os.environ["HADOOP_HOME"] = r"Z:\config\hadoop"
-            os.environ["PATH"] = rf"Z:\config\hadoop\bin;" + os.environ.get("PATH", "")
-
-    os.environ["PYSPARK_PYTHON"] = python_path
-    os.environ["PYSPARK_DRIVER_PYTHON"] = python_path
-    if "JAVA_HOME" not in os.environ and os.path.exists(r"C:\Program Files\Java\jdk-17"):
-        os.environ["JAVA_HOME"] = r"C:\Program Files\Java\jdk-17"
-        os.environ["PATH"] = rf"{os.environ['JAVA_HOME']}\bin;" + os.environ.get("PATH", "")
+    os.environ["PYSPARK_PYTHON"] = sys.executable
+    os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
+    if os.name == "nt":
+        # Local Parquet writes on Windows need winutils.exe/hadoop.dll; the repo ships them.
+        hadoop_home = _REPO_ROOT / "config" / "hadoop"
+        if "HADOOP_HOME" not in os.environ and (hadoop_home / "bin" / "winutils.exe").exists():
+            os.environ["HADOOP_HOME"] = str(hadoop_home)
+            os.environ["PATH"] = str(hadoop_home / "bin") + os.pathsep + os.environ.get("PATH", "")
+        if "JAVA_HOME" not in os.environ and os.path.exists(r"C:\Program Files\Java\jdk-17"):
+            os.environ["JAVA_HOME"] = r"C:\Program Files\Java\jdk-17"
+            os.environ["PATH"] = rf"{os.environ['JAVA_HOME']}\bin;" + os.environ.get("PATH", "")
 
     builder = (
         SparkSession.builder.appName(app_name)
@@ -53,6 +53,7 @@ def get_spark_session(
         .config("spark.ui.showConsoleProgress", "false")
         .config("spark.sql.shuffle.partitions", "4")
         .config("spark.default.parallelism", "4")
+        .config("spark.sql.parquet.outputTimestampType", "TIMESTAMP_MICROS")
     )
 
     _SPARK_INSTANCE = builder.getOrCreate()

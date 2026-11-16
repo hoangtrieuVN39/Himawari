@@ -294,6 +294,7 @@ def cleanup_old_raw_segments(
 
     deleted_count = 0
     cutoff_delta = timedelta(hours=retain_hours)
+    processed_by_date: Dict[str, set] = {}
 
     for file_path in raw_hsd_dir.rglob("*.DAT.bz2"):
         # Parse slot timestamp from filename or path
@@ -332,18 +333,14 @@ def cleanup_old_raw_segments(
         if is_pinned:
             continue
 
-        # Condition 3: Corresponding metrics JSON file exists
+        # Condition 3: the slot's B13 metrics were already extracted (legacy file name or any envelope
+        # of the active layout, e.g. raw_compact daily JSONL, carrying this scan_slot_utc)
         date_str = slot_dt.strftime("%Y-%m-%d")
         metrics_dir = Path(base_dir) / "raw" / "himawari_metrics" / f"date={date_str}"
-        if not metrics_dir.exists():
-            continue
-
-        compact_key = slot_compact  # e.g. "20261101_0100"
-        matching_metrics = [
-            f for f in metrics_dir.glob("*.json")
-            if compact_key in f.name
-        ]
-        if not matching_metrics:
+        legacy_match = metrics_dir.exists() and any(slot_compact in f.name for f in metrics_dir.glob("*.json"))
+        if date_str not in processed_by_date:
+            processed_by_date[date_str] = _processed_metric_slots(base_dir, date_str)
+        if not legacy_match and slot_iso not in processed_by_date[date_str]:
             continue
 
         # All conditions met -> delete raw segment file
@@ -354,3 +351,20 @@ def cleanup_old_raw_segments(
             pass
 
     return deleted_count
+
+
+def _processed_metric_slots(base_dir: str, date_str: str) -> set:
+    """ISO scan slots (YYYY-MM-DDTHH:MM:SSZ) that have a metrics envelope stored for date_str."""
+    from src.ingestion.raw_store import RawEnvelopeStore
+
+    slots = set()
+    try:
+        for env in RawEnvelopeStore(storage_root=base_dir).iter_envelopes(
+            "himawari_metrics", date_str=date_str, strict=False
+        ):
+            slot = (env.get("metadata") or {}).get("scan_slot_utc")
+            if slot:
+                slots.add(str(slot).replace("+00:00", "Z"))
+    except Exception:
+        return set()
+    return slots

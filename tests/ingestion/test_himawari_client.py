@@ -181,3 +181,25 @@ def test_cleanup_old_raw_segments_preserves_compact_pinned_and_recent_files(tmp_
     )
     assert removed == 0
     assert old_file.exists()
+
+
+def test_cleanup_deletes_processed_segments_when_metrics_live_in_daily_jsonl(tmp_path):
+    """Metrics now go to raw_compact/ shards; processed old segments must still be cleaned."""
+    from src.ingestion.raw_store import RawEnvelopeStore
+
+    hsd_slot = tmp_path / "raw" / "himawari_hsd" / "date=2026-11-01" / "slot=0100"
+    hsd_slot.mkdir(parents=True)
+    processed = hsd_slot / "HS_H09_20261101_0100_B13_FLDK_R20_S0410.DAT.bz2"
+    processed.write_bytes(b"12345")
+    unprocessed_dir = tmp_path / "raw" / "himawari_hsd" / "date=2026-11-01" / "slot=0110"
+    unprocessed_dir.mkdir(parents=True)
+    unprocessed = unprocessed_dir / "HS_H09_20261101_0110_B13_FLDK_R20_S0410.DAT.bz2"
+    unprocessed.write_bytes(b"12345")
+    RawEnvelopeStore(storage_root=str(tmp_path)).write("himawari_metrics", "2026-11-01", {
+        "metadata": {"batch_id": "b1", "source": "himawari_metrics", "scan_slot_utc": "2026-11-01T01:00:00Z"},
+        "airports": [],
+    })
+
+    assert cleanup_old_raw_segments(base_dir=str(tmp_path), retain_hours=0, pinned_slots=[]) == 1
+    assert not processed.exists()
+    assert unprocessed.exists()

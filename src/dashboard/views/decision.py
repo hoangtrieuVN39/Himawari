@@ -10,7 +10,7 @@ import streamlit as st
 
 from src.dashboard import components as c
 from src.dashboard.b13_viewer import VIEWER_HEIGHT_PX, build_viewer_html
-from src.dashboard.data_loader import normalize_timestamp_pair
+from src.dashboard.data_loader import load_nowcast, normalize_timestamp_pair
 from src.dashboard.metar_decoder import decode_metar, explain_priority
 from src.dashboard.views import ViewContext, baseline_trial_in_progress
 
@@ -95,6 +95,25 @@ def _satellite(ctx: ViewContext, row: dict[str, Any]) -> None:
         st.html(c.b13_metrics(row) + c.attribution())
 
 
+def resolve_nowcast(
+    nowcast_rows: dict[tuple[str, str], dict[str, Any]], slot_iso: str, icaos: list[str]
+) -> tuple[str, dict[str, dict[str, Any]]]:
+    """Decides what the Decision tab shows for the 0–60′ nowcast.
+
+    Returns (state, {icao: nowcast row}) with state:
+      'none'    - no nowcast table committed (no model);
+      'hidden'  - a model exists but did not pass the gate (it did not beat the baselines);
+      'no_slot' - the model passed the gate but this slot has not been scored yet;
+      'visible' - show the column and the drill-down card (rows are only returned in this state).
+    """
+    if not nowcast_rows:
+        return "none", {}
+    if not any(bool(r.get("gate_passed")) for r in nowcast_rows.values()):
+        return "hidden", {}
+    by_icao = {i: nowcast_rows[(slot_iso, i)] for i in icaos if (slot_iso, i) in nowcast_rows}
+    return ("visible", by_icao) if by_icao else ("no_slot", {})
+
+
 def render_decision(ctx: ViewContext) -> None:
     if baseline_trial_in_progress(st.session_state):
         st.html(c.baseline_lock_notice())
@@ -113,14 +132,19 @@ def render_decision(ctx: ViewContext) -> None:
         c.level_legend(),
     ))
     # No selected-row highlight: the drill-down below is a fragment and reruns without this table.
-    st.html(c.airport_table(rows))
+    nowcast_state, nowcast = resolve_nowcast(
+        load_nowcast(ctx.storage_root), rows[0].get("slot_utc_iso") or ctx.selected_slot, [r.get("airport_icao") for r in rows]
+    )
+    st.html(c.airport_table(rows, nowcast=nowcast if nowcast_state == "visible" else None))
+    if nowcast_state != "visible":
+        st.html(c.nowcast_note(nowcast_state))
 
     st.html(c.section_header("Truy nguyên bằng chứng", "Dữ liệu gốc từ 3 nguồn cho sân bay đang chọn"))
-    _drill_down(ctx, rows)
+    _drill_down(ctx, rows, nowcast if nowcast_state == "visible" else {})
 
 
 @st.fragment
-def _drill_down(ctx: ViewContext, rows: list[dict[str, Any]]) -> None:
+def _drill_down(ctx: ViewContext, rows: list[dict[str, Any]], nowcast: dict[str, dict[str, Any]]) -> None:
     """Airport picker + evidence. A fragment: switching airports reruns only this block."""
     icaos = [r.get("airport_icao") for r in rows]
     current = st.session_state.get(DRILL_KEY)
@@ -150,5 +174,7 @@ def _drill_down(ctx: ViewContext, rows: list[dict[str, Any]]) -> None:
             with st.expander(f"Giải mã từng nhóm ({len(groups)})"):
                 st.html(c.decode_list(groups))
         st.html(c.forecast_card(row))
+        if nowcast.get(row.get("airport_icao")):
+            st.html(c.nowcast_card(nowcast[row.get("airport_icao")]))
     with right:
         _satellite(ctx, row)

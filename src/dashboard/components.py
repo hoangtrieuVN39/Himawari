@@ -266,22 +266,29 @@ def _b13_cell(row: dict[str, Any]) -> str:
     return f'{_e(row.get("b13_summary_vi"), "Bình thường")} <span class="sub mono">(BT min: {bt_txt})</span>'
 
 
-def airport_table(rows: list[dict[str, Any]], selected_icao: str | None = None) -> str:
-    head = "".join(f"<th>{h}</th>" for h in (
+def airport_table(
+    rows: list[dict[str, Any]], selected_icao: str | None = None, nowcast: dict[str, dict[str, Any]] | None = None
+) -> str:
+    """3-airport table. `nowcast` ({icao: nowcast row}) adds the 'Nguy cơ 0–60′' column; pass None to hide it."""
+    headers = [
         "Mức ưu tiên", "Sân bay", "Lý do phân loại", "Giờ quan trắc", "Tuổi METAR",
         "Tầm nhìn", "Mưa giờ tới", "Mây B13 (vệ tinh)", "Nguồn",
-    ))
+    ]
+    if nowcast is not None:
+        headers.append(NOWCAST_TITLE)
+    head = "".join(f"<th>{h}</th>" for h in headers)
     body = []
     for r in rows:
         icao = r.get("airport_icao", "")
         lv = _level(r.get("priority_level"))
         sel = " sel" if icao == selected_icao else ""
         obs = time_pair(r.get("obs_utc_hhmm"), r.get("obs_vn_hhmm")) if r.get("metar_is_present", True) else '<span class="muted">—</span>'
+        nc_cell = f'<td class="nowrap">{nowcast_cell(nowcast.get(icao))}</td>' if nowcast is not None else ""
         body.append(
             f'<tr class="row-lv{lv}{sel}"><td class="nowrap">{level_badge(lv, compact=True)}<span class="sub">{LEVEL_LABELS[lv]}</span></td>'
             f'<td><span class="mono strong">{_e(icao)}</span><span class="sub">{_e(AIRPORT_SHORT_NAMES.get(icao, ""))}</span></td>'
             f'<td class="reason">{_e(r.get("reason_vi"))}</td><td class="nowrap">{obs}</td><td class="nowrap">{_age_cell(r)}</td>'
-            f'<td class="nowrap">{_vis_cell(r)}</td><td class="nowrap">{_rain_cell(r)}</td><td class="b13">{_b13_cell(r)}</td><td>{source_status(r)}</td></tr>'
+            f'<td class="nowrap">{_vis_cell(r)}</td><td class="nowrap">{_rain_cell(r)}</td><td class="b13">{_b13_cell(r)}</td><td>{source_status(r)}</td>{nc_cell}</tr>'
         )
     return f'<div class="tbl-wrap"><table class="tbl airports"><thead><tr>{head}</tr></thead><tbody>{"".join(body)}</tbody></table></div>'
 
@@ -363,6 +370,52 @@ def forecast_card(row: dict[str, Any]) -> str:
         '<div class="card-sub">Open-Meteo</div></div>'
         f'<div class="fc-value"><span class="fc-num mono">{val:.1f}</span><span class="fc-unit">mm/h</span>{status}</div>'
         f"{note}<div class=\"card-foot muted\">Ngưỡng cảnh báo Mức 3: ≥ {FORECAST_RAIN_ALERT_MM} mm.</div></div>"
+    )
+
+
+NOWCAST_TITLE = "Nguy cơ 0–60′"
+NOWCAST_TAG = "chỉ tham khảo"
+NOWCAST_NOTES: dict[str, tuple[str, str]] = {
+    "none": ("Dự đoán 0–60′ đang ẩn", "Chưa có mô hình dự đoán được huấn luyện. Thứ tự Mức 1–4 không bị ảnh hưởng."),
+    "hidden": (
+        "Dự đoán 0–60′ đang ẩn",
+        "Mô hình chưa vượt các phương pháp cơ sở (persistence, chỉ Open-Meteo, quy tắc hiện tại) về CSI trên tuần kiểm tra, "
+        "nên không được hiển thị. Thứ tự Mức 1–4 không bị ảnh hưởng.",
+    ),
+    "no_slot": ("Chưa có dự đoán 0–60′ cho mốc này", "Chạy `python -m src.ml.infer` để chấm điểm các mốc mới."),
+}
+
+
+def nowcast_cell(nowcast: dict[str, Any] | None) -> str:
+    """Table cell: calibrated probability in percent plus the 'chỉ tham khảo' tag; dash without a row."""
+    if not nowcast or nowcast.get("probability") is None:
+        return '<span class="muted">—</span>'
+    pct = float(nowcast["probability"]) * 100
+    cls = " warn" if nowcast.get("predicted_positive") else ""
+    return f'<span class="mono strong{cls}">{pct:.0f}%</span><span class="sub">{NOWCAST_TAG}</span>'
+
+
+def nowcast_note(state: str) -> str:
+    """Short notice shown instead of the nowcast column ('none' | 'hidden' | 'no_slot')."""
+    title, body = NOWCAST_NOTES.get(state, NOWCAST_NOTES["none"])
+    return notice(title, body, "info")
+
+
+def nowcast_card(nowcast: dict[str, Any] | None) -> str:
+    """Drill-down card: probability and the 3 most influential features. Empty string without a row."""
+    if not nowcast or nowcast.get("probability") is None:
+        return ""
+    pct = float(nowcast["probability"]) * 100
+    thr = nowcast.get("threshold")
+    verdict = pill("Trên ngưỡng vận hành", "warn") if nowcast.get("predicted_positive") else pill("Dưới ngưỡng vận hành", "neutral")
+    thr_txt = f" · ngưỡng {float(thr) * 100:.0f}%" if thr is not None else ""
+    feats = "".join(f"<li>{_e(f)}</li>" for f in (nowcast.get("top_features") or [])[:3])
+    feat_html = f'<div class="card-foot"><strong>3 đặc trưng đóng góp lớn nhất</strong><ol>{feats}</ol></div>' if feats else ""
+    return (
+        f'<div class="card"><div class="card-head"><div class="card-title">{NOWCAST_TITLE} · {NOWCAST_TAG}</div>'
+        '<div class="card-sub">Mô hình thống kê, đã hiệu chỉnh xác suất</div></div>'
+        f'<div class="fc-value"><span class="fc-num mono">{pct:.0f}</span><span class="fc-unit">%</span>{verdict}</div>'
+        f'{feat_html}<div class="card-foot muted">Không thay đổi Mức 1–4{_e(thr_txt)}.</div></div>'
     )
 
 

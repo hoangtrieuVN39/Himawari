@@ -7,6 +7,7 @@ from typing import Dict, Any, Optional, List
 
 from src.ingestion.config_loader import load_airports_config
 from src.ingestion.metar_client import ingest_metar
+from src.ingestion.metar_backfill import MAX_BACKFILL_DAYS, backfill_metar
 from src.ingestion.open_meteo_client import ingest_open_meteo
 from src.ingestion.himawari_client import (
     download_himawari_slot,
@@ -18,6 +19,16 @@ from src.ingestion.satpy_processor import (
     inject_synthetic_corrupt_test,
 )
 from src.ingestion.hdfs_client import WebHDFSClient
+
+
+def _backfill_days(value: str) -> int:
+    try:
+        days = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"--backfill-days must be an integer, got {value!r}")
+    if not 1 <= days <= MAX_BACKFILL_DAYS:
+        raise argparse.ArgumentTypeError(f"--backfill-days must be in 1..{MAX_BACKFILL_DAYS} (AWC keeps 30 days), got {days}")
+    return days
 
 
 def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
@@ -49,6 +60,14 @@ def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
         type=int,
         default=2,
         help="Hours of historical METAR to request (default: 2; e.g. 24 for backfill)"
+    )
+    parser.add_argument(
+        "--backfill-days",
+        type=_backfill_days,
+        default=None,
+        metavar="N",
+        help="Backfill N days (1..30) of historical METAR/SPECI in 24 h windows per airport "
+             "(is_backfill=true, rate limited, reruns are no-ops); then exit unless --once/--loop"
     )
     parser.add_argument(
         "--include-himawari",
@@ -146,7 +165,9 @@ def run_himawari_slot_pipeline(
     # 3. Process slot with Satpy
     segment_files = dl_res.get("files", {})
     metrics_res = process_himawari_slot(
-        scan_slot_utc=slot_iso,
+        # A fallback download is a different scan: keep its real time so the point-in-time join
+        # treats it as older imagery instead of evidence for the requested slot.
+        scan_slot_utc=dl_res.get("source_slot_utc") or slot_iso,
         segment_files=segment_files,
         airports_config=airports_cfg,
         base_dir=base_dir,
@@ -323,6 +344,28 @@ def main():
         err_type = corrupt_res.get("error_type", "UnknownError")
         err_msg = corrupt_res.get("error_message", "")
         print(f"Synthetic corruption logged: {err_type} - {err_msg}")
+        if (
+            not args.once and not args.loop and not args.himawari_window
+            and not args.sync_hdfs and not args.backfill_days
+        ):
+            return
+
+    # 1b. METAR window backfill (AWC keeps only 30 days; one request per airport per 24 h window)
+    if args.backfill_days:
+        airport_codes = list(load_airports_config(args.config).keys())
+        print(f"--- Running METAR backfill: {args.backfill_days} days for {airport_codes} ---")
+        backfill_summary = backfill_metar(
+            airports=airport_codes,
+            days=args.backfill_days,
+            base_dir=args.base_dir,
+        )
+        print(
+            "METAR backfill done: "
+            f"{backfill_summary['requests']} requests, {backfill_summary['records_total']} records "
+            f"({backfill_summary['inserted']} batches inserted, {backfill_summary['noop']} already present, "
+            f"{backfill_summary['no_data']} empty, {backfill_summary['conflicts']} conflicts skipped, "
+            f"{backfill_summary['failed']} failed)"
+        )
         if not args.once and not args.loop and not args.himawari_window and not args.sync_hdfs:
             return
 

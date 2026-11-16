@@ -4,8 +4,9 @@ import json
 from pathlib import Path
 import pytest
 
+from src.dashboard.data_loader import _read_parquet_rows
 from src.ingestion.raw_store import RawEnvelopeStore
-from src.dashboard.data_loader import load_decision_slots, sync_latest_raw_to_decision_table
+from src.spark.lake_paths import local_table_version
 
 
 def _populate_fixtures(root: Path, layout: str):
@@ -102,42 +103,6 @@ def _populate_fixtures(root: Path, layout: str):
     store.write("himawari_metrics", "2026-11-09", himawari_env)
 
 
-def test_dashboard_reader_parity_across_layouts(tmp_path: Path):
-    """Verify that dashboard loading produces identical decision slots for both layouts."""
-    legacy_root = tmp_path / "legacy"
-    compact_root = tmp_path / "compact"
-
-    _populate_fixtures(legacy_root, "legacy_files")
-    _populate_fixtures(compact_root, "daily_jsonl")
-
-    # Set up dummy decision table in processed
-    for root in (legacy_root, compact_root):
-        proc_dir = root / "processed" / "decision_table"
-        proc_dir.mkdir(parents=True, exist_ok=True)
-        # Create initial dummy slot so sync computes live slot
-        dec_file = proc_dir / "decision_table.jsonl"
-        dec_file.write_text("", encoding="utf-8")
-
-    sync_latest_raw_to_decision_table(str(legacy_root), force_latest=True)
-    sync_latest_raw_to_decision_table(str(compact_root), force_latest=True)
-
-    slots_legacy = load_decision_slots(str(legacy_root))
-    slots_compact = load_decision_slots(str(compact_root))
-
-    assert set(slots_legacy.keys()) == set(slots_compact.keys())
-    for slot_key in slots_legacy:
-        legacy_rows = sorted(slots_legacy[slot_key], key=lambda r: r["airport_icao"])
-        compact_rows = sorted(slots_compact[slot_key], key=lambda r: r["airport_icao"])
-        assert len(legacy_rows) == len(compact_rows)
-        for lr, cr in zip(legacy_rows, compact_rows):
-            assert lr["airport_icao"] == cr["airport_icao"]
-            assert lr["priority_level"] == cr["priority_level"]
-            assert lr["priority_label"] == cr["priority_label"]
-            assert lr["reason_vi"] == cr["reason_vi"]
-            assert lr["observed_at_utc"] == cr["observed_at_utc"]
-            assert lr["accepted_first_review_airports"] == cr["accepted_first_review_airports"]
-
-
 def test_python_reader_strict_mode_rejects_malformed_line(tmp_path: Path):
     """Verify that RawEnvelopeStore.iter_envelopes raises CorruptShardError on malformed JSON in strict mode."""
     from src.ingestion.raw_store import CorruptShardError
@@ -164,14 +129,6 @@ def test_python_reader_strict_mode_rejects_malformed_line(tmp_path: Path):
     assert envelopes[1]["metadata"]["batch_id"] == "b3"
 
 
-def test_spark_readers_support_multiline_option(spark):
-    """Verify that PySpark readers accept multiline=False for JSONL and multiline=True for legacy."""
-    from src.spark.readers import read_raw_metar, read_raw_open_meteo, read_raw_himawari_metrics
-
-    # If spark fixture was skipped, this test won't execute
-    assert spark is not None
-
-
 def _run_pipeline(root: Path, spark):
     from src.spark.run_pipeline import run_spark_pipeline
 
@@ -184,8 +141,7 @@ def _run_pipeline(root: Path, spark):
 
 
 def _load_decision_rows(root: Path) -> list[dict]:
-    path = root / "processed" / "decision_table" / "decision_table.jsonl"
-    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    rows = _read_parquet_rows(local_table_version(f"{root}/lake", "decision_table"))
     return sorted(rows, key=lambda r: r["airport_icao"])
 
 
@@ -216,8 +172,7 @@ def test_spark_pipeline_quarantines_corrupt_jsonl_line(tmp_path: Path, spark):
     result = _run_pipeline(root, spark)
 
     assert result["decision_rows_count"] > 0
-    q_path = root / "processed" / "quarantine" / "quarantine_records.jsonl"
-    quarantined = [json.loads(l) for l in q_path.read_text(encoding="utf-8").splitlines() if l.strip()]
+    quarantined = _read_parquet_rows(local_table_version(f"{root}/lake", "quarantine"))
     assert any("SCHEMA_VIOLATION" in (q.get("error_codes") or []) and q["source"] == "metar" for q in quarantined)
 
 

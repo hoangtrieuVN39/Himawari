@@ -18,9 +18,9 @@ from tests.spark.real_data import (
 
 def test_real_replay_scenario_0700_single_top_answer(spark: SparkSession):
     """At 07:00Z, VVDN reports real rain (-RA) while VVNB and VVTS are fair."""
-    raw_m = read_raw_metar(spark, "data/raw/metar/date=2026-11-09/*.json")
-    raw_f = read_raw_open_meteo(spark, "data/raw/open_meteo/date=2026-11-09/*.json")
-    raw_h = read_raw_himawari_metrics(spark, "data/raw/himawari_metrics/date=2026-11-09/*.json")
+    raw_m = real_raw_metar(spark)
+    raw_f = real_raw_open_meteo(spark)
+    raw_h = real_raw_himawari_metrics(spark)
 
     valid_m, _, _ = validate_and_split_metar(raw_m)
     valid_f, _, _ = validate_and_split_open_meteo(raw_f)
@@ -52,9 +52,9 @@ def test_real_replay_scenario_0700_single_top_answer(spark: SparkSession):
 
 def test_real_replay_scenario_0800_co_priority_top_tie(spark: SparkSession):
     """At 08:00Z, BOTH VVDN (rain) and VVNB (rain) have rain in METAR -> Co-priority Level 1."""
-    raw_m = read_raw_metar(spark, "data/raw/metar/date=2026-11-09/*.json")
-    raw_f = read_raw_open_meteo(spark, "data/raw/open_meteo/date=2026-11-09/*.json")
-    raw_h = read_raw_himawari_metrics(spark, "data/raw/himawari_metrics/date=2026-11-09/*.json")
+    raw_m = real_raw_metar(spark)
+    raw_f = real_raw_open_meteo(spark)
+    raw_h = real_raw_himawari_metrics(spark)
 
     valid_m, _, _ = validate_and_split_metar(raw_m)
     valid_f, _, _ = validate_and_split_open_meteo(raw_f)

@@ -34,14 +34,18 @@ def test_load_replay_slots_rejects_invalid_timestamp(tmp_path: Path):
         load_replay_slots(str(cfg))
 
 
-def test_resolve_review_slots_auto_adds_latest_live(monkeypatch):
-    monkeypatch.setattr("src.spark.run_pipeline.discover_latest_slot_utc", lambda root: "2026-11-10T08:05:00Z")
-    slots = resolve_review_slots("auto", "data")
-    assert slots == ["2026-11-09T07:00:00Z", "2026-11-09T08:00:00Z", "2026-11-09T11:00:00Z", "2026-11-10T08:05:00Z"]
-
-
-def test_resolve_review_slots_explicit_list():
-    assert resolve_review_slots(" 2026-11-09T08:00:00Z , 2026-11-09T07:00:00Z ", "data") == [
-        "2026-11-09T08:00:00Z",
+def test_review_slot_policies_use_live_fetches_rounded_up_to_5_minutes(spark):
+    # Timestamps parsed from UTC strings in Spark: createDataFrame would shift naive datetimes by the OS tz.
+    df = spark.createDataFrame(
+        [("2026-11-10T08:01:30Z", False), ("2026-11-10T08:05:00Z", False),
+         ("2026-11-10T08:11:00Z", False), ("2026-11-10T09:59:00Z", True)],
+        "f string, is_backfill boolean",
+    ).selectExpr("to_timestamp(f, \"yyyy-MM-dd'T'HH:mm:ss'Z'\") AS fetched_at_utc", "is_backfill")
+    replay = ["2026-11-09T07:00:00Z", "2026-11-09T08:00:00Z", "2026-11-09T11:00:00Z"]
+    live = ["2026-11-10T08:05:00Z", "2026-11-10T08:15:00Z"]  # back-filled fetches never create slots
+    assert resolve_review_slots("all", df) == replay + live
+    assert resolve_review_slots("auto", df) == replay + live[-1:]
+    assert resolve_review_slots(" 2026-11-09T08:00:00Z , 2026-11-09T07:00:00Z ", df) == [
         "2026-11-09T07:00:00Z",
+        "2026-11-09T08:00:00Z",
     ]

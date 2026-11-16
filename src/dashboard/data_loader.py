@@ -1,4 +1,8 @@
-"""Data loading, timestamp normalization, and audit parsing for Streamlit Dashboard."""
+"""Data loading, timestamp normalization, and audit parsing for Streamlit Dashboard.
+
+The dashboard only READS the lake: Spark is the single source of truth for priority levels
+(Gold `decision_table`), quarantine (Silver `quarantine`) and reconciliation (Gold `reconciliation`).
+"""
 
 from __future__ import annotations
 
@@ -9,474 +13,113 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 from typing import Any
 
-import portalocker
+import pyarrow.parquet as pq
 
-from src.spark.priority_rules import PriorityInput, evaluate_priority
-from src.spark.transforms import parse_metar_raw_ob
-from src.ingestion.fs_utils import atomic_write_bytes
-from src.ingestion.raw_store import RawEnvelopeStore
+from src.spark.lake_paths import default_lake_root, local_table_version
+from src.spark.runner import read_heartbeat
 
 VALID_AIRPORTS = ["VVDN", "VVNB", "VVTS"]
 INGESTION_TIMEOUT_SEC = 180
+PIPELINE_TIMEOUT_SEC = 300
+RUNNER_WAIT_SEC = 120
 
 
-def _parse_utc_dt(ts_str: str | None) -> datetime | None:
-    """Parse an ISO timestamp string to an aware UTC datetime."""
-    if not ts_str:
-        return None
-    clean = str(ts_str).strip()
-    try:
-        if clean.endswith("Z"):
-            return datetime.fromisoformat(clean.replace("Z", "+00:00")).astimezone(timezone.utc)
-        if "+" in clean or clean.count("-") > 2:
-            return datetime.fromisoformat(clean).astimezone(timezone.utc)
-        naive = datetime.fromisoformat(clean)
-        if naive.hour >= 13:
-            return (naive - timedelta(hours=7)).replace(tzinfo=timezone.utc)
-        return naive.replace(tzinfo=timezone.utc)
-    except Exception:
-        return None
+def _lake_version(storage_root: str, table: str) -> Path | None:
+    return local_table_version(default_lake_root(storage_root), table)
 
 
-def _round_up_5min_utc(dt: datetime) -> datetime:
-    """Round a UTC datetime up to the next 5-minute boundary."""
-    rem = dt.minute % 5
-    if rem != 0 or dt.second > 0 or dt.microsecond > 0:
-        return dt.replace(second=0, microsecond=0) + timedelta(minutes=(5 - rem))
-    return dt.replace(second=0, microsecond=0)
-
-
-def _classify_b13_cloud(rec: dict[str, Any]) -> tuple[str, str]:
-    """Classify B13 cloud tag and Vietnamese summary identically to enrich_valid_himawari."""
-    inner_sev = float(rec.get("inner_severe_convection_fraction") or 0.0)
-    inner_cold = float(rec.get("inner_cold_cloud_fraction") or 0.0)
-    outer_cold = float(rec.get("outer_cold_cloud_fraction") or 0.0)
-    inner_bt_k = rec.get("inner_bt_min_k")
-    bt_k = float(inner_bt_k) if inner_bt_k is not None else 999.0
-
-    if inner_sev >= 0.05 or bt_k < 220.0:
-        return (
-            "SEVERE_CONVECTION_AT_STATION",
-            "Đỉnh mây dông phát triển rất mạnh (< -53.15°C) ngay trên sân bay",
-        )
-    if inner_cold >= 0.05 or bt_k < 235.0:
-        return (
-            "COLD_CONVECTIVE_CLOUD_AT_STATION",
-            "Có mây đối lưu lạnh (< -38.15°C) tại trạm",
-        )
-    if outer_cold >= 0.05:
-        return (
-            "COLD_CLOUD_IN_OUTER_VICINITY",
-            "Có dải mây đối lưu lạnh trong vùng lân cận ±1.0°",
-        )
-    return ("WARM_OR_CLEAR_CLOUD", "Mây tầng thấp hoặc trời ít mây")
-
-
-def _load_raw_envelopes(storage_root: str) -> dict[str, list[dict[str, Any]]]:
-    """Reads every raw envelope of the active layout once, so many slots can be computed without rescanning."""
-    store = RawEnvelopeStore(storage_root=storage_root)
-    return {
-        source: list(store.iter_envelopes(source, strict=False))
-        for source in ("metar", "open_meteo", "himawari_metrics")
-    }
-
-
-def _compute_slot_rows_from_raw(
-    storage_root: str,
-    slot_utc_iso: str,
-    envelopes: dict[str, list[dict[str, Any]]] | None = None,
-) -> list[dict[str, Any]]:
-    """Build the 3 airport decision rows for slot_utc_iso from raw envelopes (identical to PySpark rules).
-
-    Pass `envelopes` (from _load_raw_envelopes) when computing several slots to avoid rescanning disk.
-    """
-    if envelopes is None:
-        envelopes = _load_raw_envelopes(storage_root)
-    slot_dt = _parse_utc_dt(slot_utc_iso)
-    if slot_dt is None:
-        return []
-    slot_str = slot_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-    target_fc_dt = slot_dt.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
-    target_fc_str = target_fc_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-    # 1. Scan valid METAR records <= slot_dt
-    metar_candidates: dict[str, list[dict[str, Any]]] = {ap: [] for ap in VALID_AIRPORTS}
-    for env in envelopes["metar"]:
-        meta = env.get("metadata") or {}
-        fetched_dt = _parse_utc_dt(meta.get("fetched_at_utc"))
-        is_backfill = bool(meta.get("is_backfill", False))
-        if fetched_dt and fetched_dt > slot_dt and not is_backfill:
-            continue
-        for item in env.get("payload") or []:
-            icao = item.get("icaoId")
-            if icao not in metar_candidates:
-                continue
-            raw_ob = item.get("rawOb") or ""
-            if not raw_ob or "NIL" in raw_ob.split():
-                continue
-            obs_epoch = item.get("obsTime")
-            if obs_epoch is not None:
-                obs_dt = datetime.fromtimestamp(int(obs_epoch), tz=timezone.utc)
-            else:
-                obs_dt = _parse_utc_dt(item.get("reportTime"))
-            if obs_dt is None or obs_dt > slot_dt:
-                continue
-            receipt_dt = _parse_utc_dt(item.get("receiptTime"))
-            parsed_wx = parse_metar_raw_ob(raw_ob, str(item.get("visib")) if item.get("visib") is not None else None)
-            metar_candidates[icao].append({
-                "obs_dt": obs_dt,
-                "fetched_dt": fetched_dt or obs_dt,
-                "receipt_dt": receipt_dt or fetched_dt or obs_dt,
-                "is_amended_or_speci": parsed_wx["is_amended_or_speci"],
-                "raw_ob": raw_ob,
-                "parsed": parsed_wx,
-            })
-
-    # 2. Scan valid Open-Meteo records for target_fc_dt with fetched_at <= slot_dt
-    fc_candidates: dict[str, list[dict[str, Any]]] = {ap: [] for ap in VALID_AIRPORTS}
-    for env in envelopes["open_meteo"]:
-        meta = env.get("metadata") or {}
-        icao = meta.get("airport_icao")
-        if icao not in fc_candidates:
-            continue
-        fetched_dt = _parse_utc_dt(meta.get("fetched_at_utc"))
-        is_backfill = bool(meta.get("is_backfill", False))
-        if fetched_dt and fetched_dt > slot_dt and not is_backfill:
-            continue
-        hourly = (env.get("payload") or {}).get("hourly") or {}
-        times = hourly.get("time") or []
-        precip = hourly.get("precipitation") or []
-        rain = hourly.get("rain") or []
-        showers = hourly.get("showers") or []
-        wcode = hourly.get("weather_code") or []
-        vis = hourly.get("visibility") or []
-        for idx, t_str in enumerate(times):
-            t_dt = _parse_utc_dt(t_str + ":00Z" if len(str(t_str)) == 16 else t_str)
-            if t_dt == target_fc_dt:
-                p_val = float(precip[idx]) if idx < len(precip) and precip[idx] is not None else 0.0
-                r_val = float(rain[idx]) if idx < len(rain) and rain[idx] is not None else 0.0
-                s_val = float(showers[idx]) if idx < len(showers) and showers[idx] is not None else 0.0
-                if p_val < 0 or r_val < 0 or s_val < 0:
-                    continue
-                fc_candidates[icao].append({
-                    "fetched_dt": fetched_dt or target_fc_dt,
-                    "precipitation_mm": p_val,
-                    "rain_mm": r_val,
-                    "showers_mm": s_val,
-                    "forecast_weather_code": int(wcode[idx]) if idx < len(wcode) and wcode[idx] is not None else None,
-                    "forecast_visibility_m": float(vis[idx]) if idx < len(vis) and vis[idx] is not None else None,
-                    "forecast_rain_next_hour_mm": max(p_val, r_val + s_val),
-                })
-
-    # 3. Scan valid Himawari B13 metrics <= slot_dt
-    hima_candidates: dict[str, list[dict[str, Any]]] = {ap: [] for ap in VALID_AIRPORTS}
-    for env in envelopes["himawari_metrics"]:
-        meta = env.get("metadata") or {}
-        if meta.get("is_synthetic_test"):
-            continue
-        for ap_item in env.get("airports") or []:
-            icao = ap_item.get("airport_icao")
-            if icao not in hima_candidates or ap_item.get("status") != "AVAILABLE":
-                continue
-            scan_dt = _parse_utc_dt(ap_item.get("scan_time_utc"))
-            fetched_dt = _parse_utc_dt(ap_item.get("fetched_at_utc") or meta.get("processed_at_utc"))
-            if scan_dt is None or scan_dt > slot_dt:
-                continue
-            vf = ap_item.get("b13_valid_fraction")
-            bt_k = ap_item.get("inner_bt_min_k")
-            if vf is None or not (0.0 <= float(vf) <= 1.0):
-                continue
-            if bt_k is None or not (150.0 <= float(bt_k) <= 350.0):
-                continue
-            tag, summary_vi = _classify_b13_cloud(ap_item)
-            hima_candidates[icao].append({
-                "scan_dt": scan_dt,
-                "fetched_dt": fetched_dt or scan_dt,
-                "png_rel_path": ap_item.get("png_rel_path"),
-                "b13_valid_fraction": float(vf),
-                "inner_bt_min_k": float(bt_k),
-                "inner_bt_min_c": float(ap_item["inner_bt_min_c"]) if ap_item.get("inner_bt_min_c") is not None else round(float(bt_k) - 273.15, 2),
-                "inner_cold_cloud_fraction": float(ap_item.get("inner_cold_cloud_fraction") or 0.0),
-                "inner_severe_convection_fraction": float(ap_item.get("inner_severe_convection_fraction") or 0.0),
-                "b13_cloud_tag": tag,
-                "b13_summary_vi": summary_vi,
-            })
-
-    # 4. Assemble 3 airport rows and apply Level 1-4 priority rules
-    rows: list[dict[str, Any]] = []
-    for icao in VALID_AIRPORTS:
-        m_list = metar_candidates[icao]
-        m_best = None
-        rev_idx = 0
-        if m_list:
-            # Deduplicate revisions per obs_dt first, then pick latest obs_dt
-            m_list.sort(key=lambda x: (x["obs_dt"], x["is_amended_or_speci"], x["receipt_dt"], x["fetched_dt"]))
-            latest_obs = m_list[-1]["obs_dt"]
-            same_obs = [x for x in m_list if x["obs_dt"] == latest_obs]
-            # Count distinct raw_ob revisions for this observation timestamp
-            seen_raw: list[str] = []
-            for x in same_obs:
-                if x["raw_ob"] not in seen_raw:
-                    seen_raw.append(x["raw_ob"])
-            rev_idx = len(seen_raw)
-            m_best = same_obs[-1]
-
-        f_list = fc_candidates[icao]
-        f_best = None
-        if f_list:
-            f_list.sort(key=lambda x: x["fetched_dt"])
-            f_best = f_list[-1]
-
-        h_list = hima_candidates[icao]
-        h_best = None
-        if h_list:
-            h_list.sort(key=lambda x: (x["scan_dt"], x["fetched_dt"]))
-            h_best = h_list[-1]
-
-        metar_present = m_best is not None
-        obs_utc_str = m_best["obs_dt"].strftime("%Y-%m-%dT%H:%M:%SZ") if m_best else None
-        obs_hhmm = m_best["obs_dt"].strftime("%H:%MZ") if m_best else ""
-        metar_fetched_str = m_best["fetched_dt"].strftime("%Y-%m-%dT%H:%M:%SZ") if m_best else None
-        metar_age = round((slot_dt - m_best["obs_dt"]).total_seconds() / 60.0, 1) if m_best else None
-        parsed = m_best["parsed"] if m_best else parse_metar_raw_ob(None)
-
-        fc_present = f_best is not None
-        fc_rain = f_best["forecast_rain_next_hour_mm"] if f_best else None
-
-        # Priority Level 1-4 evaluation (shared with the Spark engine's rules)
-        decision = evaluate_priority(
-            PriorityInput(
-                metar_is_present=metar_present,
-                metar_age_minutes=metar_age,
-                has_precip_or_thunder_at_station=parsed["has_precip_or_thunder_at_station"],
-                is_low_visibility=parsed["is_low_visibility"],
-                station_weather_codes=parsed["station_weather_codes"],
-                visibility_m=parsed["visibility_m"],
-                observed_hhmm=obs_hhmm,
-                forecast_is_present=fc_present,
-                forecast_rain_next_hour_mm=fc_rain,
-                target_forecast_hhmm=target_fc_dt.strftime("%H:%MZ"),
-            )
-        )
-        p_level, p_label, reason_vi = decision.level, decision.label, decision.reason_vi
-
-        rows.append({
-            "review_slot_utc": slot_str,
-            "airport_icao": icao,
-            "observed_at_utc": obs_utc_str,
-            "metar_fetched_at_utc": metar_fetched_str,
-            "raw_ob": m_best["raw_ob"] if m_best else None,
-            "visibility_m": parsed["visibility_m"],
-            "visibility_capped_9999": parsed["visibility_capped_9999"],
-            "is_low_visibility": parsed["is_low_visibility"],
-            "has_precip_or_thunder_at_station": parsed["has_precip_or_thunder_at_station"],
-            "station_weather_codes": parsed["station_weather_codes"],
-            "has_vicinity_weather": parsed["has_vicinity_weather"],
-            "vicinity_weather_codes": parsed["vicinity_weather_codes"],
-            "trend_weather_codes": parsed["trend_weather_codes"],
-            "is_amended_or_speci": parsed["is_amended_or_speci"],
-            "revision_index": rev_idx if metar_present else None,
-            "metar_is_present": metar_present,
-            "metar_age_minutes": metar_age,
-            "target_forecast_hour_utc": target_fc_str if fc_present else None,
-            "forecast_fetched_at_utc": f_best["fetched_dt"].strftime("%Y-%m-%dT%H:%M:%SZ") if f_best else None,
-            "precipitation_mm": f_best["precipitation_mm"] if f_best else None,
-            "rain_mm": f_best["rain_mm"] if f_best else None,
-            "showers_mm": f_best["showers_mm"] if f_best else None,
-            "forecast_weather_code": f_best["forecast_weather_code"] if f_best else None,
-            "forecast_visibility_m": f_best["forecast_visibility_m"] if f_best else None,
-            "forecast_is_present": fc_present if fc_present else None,
-            "forecast_rain_next_hour_mm": fc_rain,
-            "latest_b13_scan_time_utc": h_best["scan_dt"].strftime("%Y-%m-%dT%H:%M:%SZ") if h_best else None,
-            "latest_b13_png_path": h_best["png_rel_path"] if h_best else None,
-            "b13_valid_fraction": h_best["b13_valid_fraction"] if h_best else None,
-            "inner_bt_min_k": h_best["inner_bt_min_k"] if h_best else None,
-            "inner_bt_min_c": h_best["inner_bt_min_c"] if h_best else None,
-            "inner_cold_cloud_fraction": h_best["inner_cold_cloud_fraction"] if h_best else None,
-            "inner_severe_convection_fraction": h_best["inner_severe_convection_fraction"] if h_best else None,
-            "b13_cloud_tag": h_best["b13_cloud_tag"] if h_best else None,
-            "b13_summary_vi": h_best["b13_summary_vi"] if h_best else None,
-            "b13_is_present": h_best is not None,
-            "priority_level": p_level,
-            "priority_label": p_label,
-            "reason_vi": reason_vi,
-        })
-
-    # Co-priority top resolution across the 3 airports
-    min_p = min(r["priority_level"] for r in rows)
-    accepted = sorted(r["airport_icao"] for r in rows if r["priority_level"] == min_p)
-    for r in rows:
-        r["top_priority_level"] = min_p
-        r["is_top_priority"] = r["priority_level"] == min_p
-        r["accepted_first_review_airports"] = accepted
-        r["co_priority_top_count"] = len(accepted)
-        r["is_co_priority_top"] = r["is_top_priority"] and len(accepted) > 1
-
+def _read_parquet_rows(version_dir: Path) -> list[dict[str, Any]]:
+    """Rows of a committed lake version as plain dicts; timestamps become ISO-8601 UTC 'Z' strings."""
+    table = pq.read_table(version_dir)
+    rows = table.to_pylist()
+    for row in rows:
+        for key, value in row.items():
+            if isinstance(value, datetime):
+                aware = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+                row[key] = aware.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            elif hasattr(value, "isoformat") and not isinstance(value, str):
+                row[key] = value.isoformat()
     return rows
 
 
-# Internal signature cache for sync_latest_raw_to_decision_table:
-# Key: resolved storage_root Path string -> {"input_sig": tuple, "dec_sig": tuple}
-_SYNC_CACHE: dict[str, dict[str, Any]] = {}
+def latest_decision_version(storage_root: str = "data") -> str | None:
+    """Name of the newest committed Gold decision_table version (run_id=...), or None."""
+    version = _lake_version(storage_root, "decision_table")
+    return version.name if version else None
 
 
-def _raw_input_signature(storage_root: str) -> tuple[tuple[str, int, int], ...]:
-    """Computes a sorted deterministic signature of active raw input files and state marker."""
-    return RawEnvelopeStore(storage_root=storage_root).signature()
+# Version served by load_decision_slots per storage root; the LIVE watcher compares against it.
+_SERVED_VERSION: dict[str, str | None] = {}
 
 
-def has_unsynced_raw_data(storage_root: str = "data") -> bool:
-    """True when ingestion wrote raw files that the last decision-table sync has not seen.
-
-    Read-only and cheap (file signatures only): used by the LIVE watcher to offer a refresh without
-    changing the slot the user is looking at. False until a first sync has run in this process, and
-    after a sync dropped its cache entry, so False means "nothing known to be pending", NOT "up to date".
-    """
-    cached = _SYNC_CACHE.get(str(Path(storage_root).resolve()))
-    if cached is None:
+def has_new_decision_version(storage_root: str = "data") -> bool:
+    """True when Spark committed a newer Gold decision table than the one last loaded in this process."""
+    key = str(Path(storage_root).resolve())
+    if key not in _SERVED_VERSION:
         return False
-    return _raw_input_signature(storage_root) != cached.get("input_sig")
+    return latest_decision_version(storage_root) != _SERVED_VERSION[key]
 
 
-def sync_latest_raw_to_decision_table(
-    storage_root: str = "data",
-    force_latest: bool = False,
-) -> list[str]:
-    """Ensure all live non-backfill raw METAR batches in storage_root are reflected in decision_table.jsonl."""
-    root = Path(storage_root)
-    dec_path = root / "processed" / "decision_table" / "decision_table.jsonl"
-    if not dec_path.exists():
-        return []
-
-    # Serialize writers (other Streamlit sessions / pipeline) on the decision table.
-    locks_dir = root / ".storage-locks"
-    locks_dir.mkdir(parents=True, exist_ok=True)
-    with portalocker.Lock(str(locks_dir / "decision_table.lock"), timeout=30.0):
-        return _sync_locked(root, dec_path, storage_root, force_latest)
-
-
-def _sync_locked(root: Path, dec_path: Path, storage_root: str, force_latest: bool) -> list[str]:
-    """Body of sync_latest_raw_to_decision_table; caller holds the decision-table lock."""
-    cache_key = str(root.resolve())
-    current_input_sig = _raw_input_signature(storage_root)
-
-    current_dec_sig = (dec_path.stat().st_size, dec_path.stat().st_mtime_ns)
-
-    cached = _SYNC_CACHE.get(cache_key)
-    if (
-        not force_latest
-        and cached is not None
-        and cached.get("input_sig") == current_input_sig
-        and cached.get("dec_sig") == current_dec_sig
-    ):
-        return []
-
-    # Read every raw envelope once; reused for slot discovery and for all slot computations.
-    envelopes = _load_raw_envelopes(storage_root)
-    discovered_slots: set[str] = set()
-    for env in envelopes["metar"]:
-        meta = env.get("metadata") or {}
-        if meta.get("is_backfill"):
-            continue
-        fetched_dt = _parse_utc_dt(meta.get("fetched_at_utc"))
-        if fetched_dt:
-            slot_dt = _round_up_5min_utc(fetched_dt)
-            discovered_slots.add(slot_dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
-
-    if not discovered_slots:
-        # Update cache if decision table exists but no live slots discovered
-        _SYNC_CACHE[cache_key] = {
-            "input_sig": current_input_sig,
-            "dec_sig": current_dec_sig,
-        }
-        return []
-
-    # Load existing rows keyed by (normalized_slot_utc, airport_icao)
-    existing_by_slot: dict[str, list[dict[str, Any]]] = {}
-    with open(dec_path, "r", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            try:
-                row = json.loads(line.strip())
-                norm_slot = normalize_timestamp_pair(row.get("review_slot_utc"))["utc_iso"]
-                row["review_slot_utc"] = norm_slot
-                existing_by_slot.setdefault(norm_slot, []).append(row)
-            except Exception:
-                continue
-
-    # When signature changed, recompute all discovered slots (including older ones)
-    # so that any late forecast or metric updates them, while preserving historical replay slots.
-    slots_to_compute = sorted(discovered_slots)
-
-    for slot_iso in slots_to_compute:
-        new_rows = _compute_slot_rows_from_raw(storage_root, slot_iso, envelopes)
-        if len(new_rows) == len(VALID_AIRPORTS):
-            existing_by_slot[slot_iso] = new_rows
-
-    # Atomic write back (unique temp file + fsync + replace)
-    payload = "".join(
-        json.dumps(r, ensure_ascii=False) + "\n"
-        for slot_iso in sorted(existing_by_slot.keys())
-        for r in existing_by_slot[slot_iso]
-    )
-    atomic_write_bytes(dec_path, payload.encode("utf-8"))
-
-    # Re-verify that raw input didn't mutate during computation before setting cache
-    post_input_sig = _raw_input_signature(storage_root)
-    if post_input_sig == current_input_sig:
-        new_dec_st = dec_path.stat()
-        _SYNC_CACHE[cache_key] = {
-            "input_sig": current_input_sig,
-            "dec_sig": (new_dec_st.st_size, new_dec_st.st_mtime_ns),
-        }
-    else:
-        _SYNC_CACHE.pop(cache_key, None)
-
-    return slots_to_compute
+def _runner_is_alive(storage_root: str) -> bool:
+    """A long-lived Spark runner (src.spark.runner) checked Bronze recently."""
+    beat = read_heartbeat(storage_root) or {}
+    last = beat.get("last_check_at_utc")
+    if not last or beat.get("status") == "ERROR":
+        return False
+    age = (datetime.now(timezone.utc) - datetime.fromisoformat(last.replace("Z", "+00:00"))).total_seconds()
+    return age <= 3 * float(beat.get("poll_seconds") or 15.0) + 60
 
 
 def fetch_and_update_realtime(
     storage_root: str = "data",
     include_himawari: bool = True,
 ) -> dict[str, Any]:
-    """Trigger live ingestion from AviationWeather, Open-Meteo, and Himawari-9 S3, then sync decision_table.jsonl."""
-    cmd = [
-        sys.executable,
-        "-m",
-        "src.ingestion.run_ingest",
-        "--once",
-        "--base-dir",
-        storage_root,
-    ]
+    """Ingest METAR, Open-Meteo and Himawari-9 now, then publish a new Gold version with Spark.
+
+    If the long-lived runner is alive it picks up the new Bronze batches itself and we wait for its
+    commit; otherwise the batch pipeline runs once as a subprocess.
+    """
+    before = latest_decision_version(storage_root)
+    cmd = [sys.executable, "-m", "src.ingestion.run_ingest", "--once", "--base-dir", storage_root]
     if include_himawari:
         cmd.append("--include-himawari")
-
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=INGESTION_TIMEOUT_SEC)
     except subprocess.TimeoutExpired:
         return {"status": "ERROR", "error": f"Ingestion timeout after {INGESTION_TIMEOUT_SEC}s"}
     except OSError as exc:
         return {"status": "ERROR", "error": f"Could not start ingestion: {exc}"}
-
     if proc.returncode != 0:
-        return {
-            "status": "ERROR",
-            "error": (proc.stderr or proc.stdout or "Unknown ingestion error")[:500],
-        }
+        return {"status": "ERROR", "error": (proc.stderr or proc.stdout or "Unknown ingestion error")[:500]}
 
-    try:
-        synced_slots = sync_latest_raw_to_decision_table(storage_root=storage_root, force_latest=True)
-    except Exception as exc:
-        return {"status": "ERROR", "error": f"Decision table sync failed: {exc}"}
+    if _runner_is_alive(storage_root):
+        deadline = time.monotonic() + RUNNER_WAIT_SEC
+        while time.monotonic() < deadline and latest_decision_version(storage_root) == before:
+            time.sleep(2.0)
+        if latest_decision_version(storage_root) == before:
+            return {"status": "ERROR", "error": f"Spark runner did not publish within {RUNNER_WAIT_SEC}s"}
+        published_by = "runner"
+    else:
+        spark_cmd = [sys.executable, "-m", "src.spark.run_pipeline", "--storage-root", storage_root]
+        try:
+            proc = subprocess.run(spark_cmd, capture_output=True, text=True, timeout=PIPELINE_TIMEOUT_SEC)
+        except subprocess.TimeoutExpired:
+            return {"status": "ERROR", "error": f"Spark pipeline timeout after {PIPELINE_TIMEOUT_SEC}s"}
+        except OSError as exc:
+            return {"status": "ERROR", "error": f"Could not start Spark pipeline: {exc}"}
+        if proc.returncode != 0:
+            return {"status": "ERROR", "error": (proc.stderr or proc.stdout or "Spark pipeline error")[-500:]}
+        published_by = "pipeline"
+
     slots = load_decision_slots(storage_root)
-    latest_slot = max(slots.keys()) if slots else None
     return {
         "status": "SUCCESS",
-        "synced_slots": synced_slots,
-        "latest_slot_utc": latest_slot,
+        "published_by": published_by,
+        "decision_version": latest_decision_version(storage_root),
+        "latest_slot_utc": max(slots.keys()) if slots else None,
     }
 
 
@@ -574,67 +217,67 @@ def _cached(name: str, signature: Any, compute):
 
 
 def load_decision_slots(storage_root: str = "data") -> dict[str, list[dict[str, Any]]]:
-    """Load decision table from decision_table.jsonl and group by normalized UTC slot.
+    """Load the current Gold decision table (newest committed version) grouped by UTC slot.
 
-    Read-only: never modifies disk. Call sync_latest_raw_to_decision_table() first to fold
-    newer non-backfill raw batches into decision_table.jsonl. Re-reads only when the file's
-    signature changes; callers get fresh dict copies so they cannot corrupt the cache.
+    Read-only. Re-reads only when Spark commits a new version; callers get fresh dict copies so
+    they cannot corrupt the cache.
 
     Returns:
         dict[utc_iso, list[row_dict]] where utc_iso is e.g. "2026-11-09T07:00:00Z"
     """
-    path = Path(storage_root) / "processed" / "decision_table" / "decision_table.jsonl"
-    sig = _file_signature(path)
-    if sig is None:
+    version = _lake_version(storage_root, "decision_table")
+    _SERVED_VERSION[str(Path(storage_root).resolve())] = version.name if version else None
+    if version is None:
         return {}
-    slots = _cached(f"slots:{sig[0]}", sig, lambda: _read_decision_slots(path))
+    slots = _cached(f"slots:{version.parent.resolve()}", version.name, lambda: _read_decision_slots(version))
     return copy.deepcopy(slots)  # rows hold nested lists (weather codes, accepted airports)
 
 
-def _read_decision_slots(path: Path) -> dict[str, list[dict[str, Any]]]:
+def _read_decision_slots(version_dir: Path) -> dict[str, list[dict[str, Any]]]:
     slots: dict[str, list[dict[str, Any]]] = {}
 
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            line_str = line.strip()
-            if not line_str:
-                continue
-            try:
-                row = json.loads(line_str)
-            except Exception:
-                continue
+    for row in sorted(_read_parquet_rows(version_dir), key=lambda r: (r["review_slot_utc"], r["airport_icao"])):
+        row.pop("review_date", None)  # partition column, duplicated by review_slot_utc
+        slot_info = normalize_timestamp_pair(row.get("review_slot_utc"))
+        obs_info = normalize_timestamp_pair(row.get("observed_at_utc"), row.get("raw_ob"))
 
-            slot_info = normalize_timestamp_pair(row.get("review_slot_utc"))
-            obs_info = normalize_timestamp_pair(row.get("observed_at_utc"), row.get("raw_ob"))
+        row["slot_utc_iso"] = slot_info["utc_iso"]
+        row["slot_utc_hhmm"] = slot_info["utc_hhmm"]
+        row["slot_vn_iso"] = slot_info["vn_iso"]
+        row["slot_vn_hhmm"] = slot_info["vn_hhmm"]
+        row["slot_display_label"] = f"{slot_info['utc_hhmm']} ({slot_info['vn_hhmm']} ICT)"
 
-            row["slot_utc_iso"] = slot_info["utc_iso"]
-            row["slot_utc_hhmm"] = slot_info["utc_hhmm"]
-            row["slot_vn_iso"] = slot_info["vn_iso"]
-            row["slot_vn_hhmm"] = slot_info["vn_hhmm"]
-            row["slot_display_label"] = f"{slot_info['utc_hhmm']} ({slot_info['vn_hhmm']} ICT)"
+        row["obs_utc_iso"] = obs_info["utc_iso"]
+        row["obs_utc_hhmm"] = obs_info["utc_hhmm"]
+        row["obs_vn_iso"] = obs_info["vn_iso"]
+        row["obs_vn_hhmm"] = obs_info["vn_hhmm"]
+        row["obs_ddhhmmz"] = obs_info["metar_ddhhmmz"]
 
-            row["obs_utc_iso"] = obs_info["utc_iso"]
-            row["obs_utc_hhmm"] = obs_info["utc_hhmm"]
-            row["obs_vn_iso"] = obs_info["vn_iso"]
-            row["obs_vn_hhmm"] = obs_info["vn_hhmm"]
-            row["obs_ddhhmmz"] = obs_info["metar_ddhhmmz"]
-
-            key = slot_info["utc_iso"]
-            if key not in slots:
-                slots[key] = []
-            slots[key].append(row)
-
-    # Ensure accepted_first_review_airports is present and consistent on all rows in each slot
-    for slot_key, rows in slots.items():
-        if rows:
-            # If not present in raw row, compute from minimum priority_level
-            min_priority = min(r.get("priority_level", 999) for r in rows)
-            default_accepted = sorted([r["airport_icao"] for r in rows if r.get("priority_level") == min_priority])
-            for r in rows:
-                if not r.get("accepted_first_review_airports"):
-                    r["accepted_first_review_airports"] = default_accepted
+        slots.setdefault(slot_info["utc_iso"], []).append(row)
 
     return slots
+
+
+def load_nowcast(storage_root: str = "data") -> dict[tuple[str, str], dict[str, Any]]:
+    """Current Gold `nowcast` (newest committed version) keyed by (slot UTC ISO, airport ICAO).
+
+    Read-only and cached per committed version. Returns {} when no nowcast was ever committed. Every row
+    carries `gate_passed`; the dashboard shows probabilities only when it is true.
+    """
+    version = _lake_version(storage_root, "nowcast")
+    if version is None:
+        return {}
+    rows = _cached(f"nowcast:{version.parent.resolve()}", version.name, lambda: _read_nowcast(version))
+    return copy.deepcopy(rows)
+
+
+def _read_nowcast(version_dir: Path) -> dict[tuple[str, str], dict[str, Any]]:
+    out: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in _read_parquet_rows(version_dir):
+        row.pop("review_date", None)  # partition column, duplicated by review_slot_utc
+        slot = normalize_timestamp_pair(row.get("review_slot_utc"))["utc_iso"]
+        out[(slot, row["airport_icao"])] = row
+    return out
 
 
 def sort_slot_rows(rows: list[dict[str, Any]], sort_mode: str = "priority") -> list[dict[str, Any]]:
@@ -716,49 +359,54 @@ def get_b13_image_sequence(
 def load_audit_and_reconciliation(storage_root: str = "data") -> dict[str, Any]:
     """Load reconciliation summary, quarantine records, synthetic quarantine, and operational logs.
 
-    Cached on the signature of every input file; returns a deep copy.
+    Cached on the lake versions and the signature of every log file; returns a deep copy.
     """
     root = Path(storage_root)
     inputs = [
-        root / "processed" / "reconciliation" / "reconciliation_summary.json",
-        root / "processed" / "quarantine" / "quarantine_records.jsonl",
         root / "logs" / "himawari_file_errors.jsonl",
         root / "logs" / "ingestion_log.jsonl",
         root / "logs" / "hdfs_sync_log.jsonl",
     ]
     syn_dir = root / "raw" / "synthetic_quarantine"
     syn_files = sorted(syn_dir.glob("*.json")) if syn_dir.exists() else []
-    sig = tuple(_file_signature(p) for p in inputs + syn_files) + (len(syn_files),)
+    versions = tuple(
+        str(v) if (v := _lake_version(storage_root, t)) else None for t in ("reconciliation", "quarantine")
+    )
+    sig = versions + tuple(_file_signature(p) for p in inputs + syn_files) + (len(syn_files),)
     value = _cached(f"audit:{root.resolve()}", sig, lambda: _read_audit_and_reconciliation(storage_root))
     return copy.deepcopy(value)
+
+
+def _reconciliation_from_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Rebuilds the reconciliation report (one Gold row per source) in its original dict shape."""
+    if not rows:
+        return {"all_sources_reconciled": False, "sources": []}
+    first = rows[0]
+    source_keys = (
+        "source", "rows_read", "rows_quarantined", "rows_valid_pre_dedup",
+        "rows_retained_valid", "rows_duplicate_dropped", "is_reconciled",
+    )
+    return {
+        "run_id": first.get("run_id"),
+        "generated_at_utc": first.get("generated_at_utc"),
+        "all_sources_reconciled": bool(first.get("all_sources_reconciled")),
+        "sources": [{k: r.get(k) for k in source_keys} for r in rows],
+        "binary_file_errors": {
+            "total_count": first.get("binary_errors_total", 0),
+            "synthetic_count": first.get("binary_errors_synthetic", 0),
+            "log_path": first.get("binary_errors_log_path"),
+        },
+    }
 
 
 def _read_audit_and_reconciliation(storage_root: str) -> dict[str, Any]:
     root = Path(storage_root)
 
-    # 1. Reconciliation summary
-    recon_path = root / "processed" / "reconciliation" / "reconciliation_summary.json"
-    reconciliation = {"all_sources_reconciled": False, "sources": []}
-    if recon_path.exists():
-        try:
-            with open(recon_path, "r", encoding="utf-8") as f:
-                reconciliation = json.load(f)
-        except Exception:
-            pass
-
-    # 2. Quarantine records
-    quarantine_path = root / "processed" / "quarantine" / "quarantine_records.jsonl"
-    quarantine_records: list[dict[str, Any]] = []
-    if quarantine_path.exists():
-        with open(quarantine_path, "r", encoding="utf-8") as f:
-            for line in f:
-                line_str = line.strip()
-                if line_str:
-                    try:
-                        quarantine_records.append(json.loads(line_str))
-                    except Exception:
-                        pass
-
+    # 1. Reconciliation summary (Gold) and 2. quarantine records (Silver)
+    recon_version = _lake_version(storage_root, "reconciliation")
+    reconciliation = _reconciliation_from_rows(_read_parquet_rows(recon_version) if recon_version else [])
+    q_version = _lake_version(storage_root, "quarantine")
+    quarantine_records = _read_parquet_rows(q_version) if q_version else []
     # 3. Synthetic quarantine preview
     synthetic_preview: list[dict[str, Any]] = []
     syn_dir = root / "raw" / "synthetic_quarantine"

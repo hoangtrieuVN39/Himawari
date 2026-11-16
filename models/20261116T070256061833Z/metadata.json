@@ -1,0 +1,844 @@
+{
+  "run_id": "20261116T070256061833Z",
+  "created_at_utc": "2026-11-16T07:02:57Z",
+  "git_sha": "2b6566f84ea6e88fbff867fa75dccce1e10e1788",
+  "git_dirty": true,
+  "lake_root": "data/lake",
+  "target": "any METAR in (t, t+60'] with precip/thunder at station or visibility < 5000 m",
+  "split": {
+    "method": "chronological holdout, 2 h gap between sets, last 7 days = test",
+    "bounds_utc": {
+      "train_hi": "2026-11-04T01:30:00Z",
+      "val_lo": "2026-11-04T03:30:00Z",
+      "val_hi": "2026-11-09T03:30:00Z",
+      "test_lo": "2026-11-09T05:30:00Z",
+      "test_hi": "2026-11-16T05:30:00Z"
+    },
+    "sets": {
+      "train": {
+        "rows": 2502,
+        "positives": 338,
+        "rows_with_forecast": 0,
+        "rows_with_b13": 0,
+        "first_t": "2026-10-17T01:00:00Z",
+        "last_t": "2026-11-04T01:30:00Z",
+        "positive_rate": 0.13509192645883294
+      },
+      "validation": {
+        "rows": 714,
+        "positives": 108,
+        "rows_with_forecast": 0,
+        "rows_with_b13": 0,
+        "first_t": "2026-11-04T04:00:00Z",
+        "last_t": "2026-11-09T03:30:00Z",
+        "positive_rate": 0.15126050420168066
+      },
+      "test": {
+        "rows": 1008,
+        "positives": 301,
+        "rows_with_forecast": 516,
+        "rows_with_b13": 36,
+        "first_t": "2026-11-09T06:00:00Z",
+        "last_t": "2026-11-16T05:30:00Z",
+        "positive_rate": 0.2986111111111111
+      }
+    }
+  },
+  "features": [
+    "cur_precip_or_thunder",
+    "cur_low_visibility",
+    "cur_visibility_km",
+    "cur_vicinity_weather",
+    "pos_obs_1h",
+    "pos_obs_3h",
+    "fc_rain_next_hour_mm",
+    "forecast_missing",
+    "b13_missing",
+    "inner_bt_min_c",
+    "inner_cold_cloud_fraction",
+    "inner_severe_convection_fraction",
+    "bt_delta_15m_c",
+    "bt_delta_30m_c",
+    "bt_delta_15m_missing",
+    "bt_delta_30m_missing",
+    "hour_sin",
+    "hour_cos",
+    "airport_VVDN",
+    "airport_VVNB",
+    "airport_VVTS"
+  ],
+  "feature_labels_vi": {
+    "cur_precip_or_thunder": "METAR hiện tại có mưa/dông",
+    "cur_low_visibility": "METAR hiện tại tầm nhìn dưới 5 km",
+    "cur_visibility_km": "Tầm nhìn hiện tại",
+    "cur_vicinity_weather": "Hiện tượng thời tiết lân cận sân bay",
+    "pos_obs_1h": "Số bản tin nguy hiểm trong 1 giờ qua",
+    "pos_obs_3h": "Số bản tin nguy hiểm trong 3 giờ qua",
+    "fc_rain_next_hour_mm": "Dự báo mưa giờ tới (Open-Meteo)",
+    "forecast_missing": "Thiếu dự báo Open-Meteo",
+    "b13_missing": "Thiếu ảnh vệ tinh B13",
+    "inner_bt_min_c": "Nhiệt độ sáng đỉnh mây thấp nhất (B13)",
+    "inner_cold_cloud_fraction": "Tỷ lệ mây lạnh (B13)",
+    "inner_severe_convection_fraction": "Tỷ lệ đối lưu mạnh (B13)",
+    "bt_delta_15m_c": "Đỉnh mây lạnh đi trong 15 phút (B13)",
+    "bt_delta_30m_c": "Đỉnh mây lạnh đi trong 30 phút (B13)",
+    "bt_delta_15m_missing": "Thiếu lượt quét B13 15 phút trước",
+    "bt_delta_30m_missing": "Thiếu lượt quét B13 30 phút trước",
+    "hour_sin": "Giờ trong ngày (sin)",
+    "hour_cos": "Giờ trong ngày (cos)",
+    "airport_VVDN": "Sân bay Đà Nẵng (VVDN)",
+    "airport_VVNB": "Sân bay Nội Bài (VVNB)",
+    "airport_VVTS": "Sân bay Tân Sơn Nhất (VVTS)"
+  },
+  "fill_values": {
+    "cur_visibility_km": 10.0,
+    "fc_rain_next_hour_mm": 0.0,
+    "inner_bt_min_c": 0.0,
+    "inner_cold_cloud_fraction": 0.0,
+    "inner_severe_convection_fraction": 0.0,
+    "bt_delta_15m_c": 0.0,
+    "bt_delta_30m_c": 0.0
+  },
+  "scaler": {
+    "mean": [
+      0.0815347721822542,
+      0.03836930455635491,
+      9.17861710631495,
+      0.009192645883293365,
+      0.21063149480415663,
+      0.6298960831334932,
+      0.0,
+      1.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      0.010341748708858714,
+      0.0129107414818443,
+      0.3337330135891287,
+      0.33253397282174263,
+      0.3337330135891287
+    ],
+    "std": [
+      0.27370932733755976,
+      0.19212457927982715,
+      1.6589362791390878,
+      0.09545565957393948,
+      0.5627363610168438,
+      1.4124147914035223,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.70611642824584,
+      0.7081847791371287,
+      0.4716399005416292,
+      0.47121531839956804,
+      0.4716399005416292
+    ]
+  },
+  "models": {
+    "lr": {
+      "regParam": 0.01,
+      "elasticNetParam": 0.0,
+      "maxIter": 200,
+      "intercept": -2.3610050928244246,
+      "coefficients": {
+        "cur_precip_or_thunder": 0.5578042036509074,
+        "cur_low_visibility": 0.18450242799885905,
+        "cur_visibility_km": -0.5349518658060554,
+        "cur_vicinity_weather": 0.12027649608717796,
+        "pos_obs_1h": 0.23549412780802317,
+        "pos_obs_3h": 0.2370515022604768,
+        "fc_rain_next_hour_mm": 0.0,
+        "forecast_missing": 0.0,
+        "b13_missing": 0.0,
+        "inner_bt_min_c": 0.0,
+        "inner_cold_cloud_fraction": 0.0,
+        "inner_severe_convection_fraction": 0.0,
+        "bt_delta_15m_c": 0.0,
+        "bt_delta_30m_c": 0.0,
+        "bt_delta_15m_missing": 0.0,
+        "bt_delta_30m_missing": 0.0,
+        "hour_sin": -0.0736716548513095,
+        "hour_cos": -0.07503307393639772,
+        "airport_VVDN": 0.07506029952246662,
+        "airport_VVNB": -0.09276076351597663,
+        "airport_VVTS": 0.017616958413028384
+      }
+    },
+    "gbt": {
+      "maxIter": 40,
+      "maxDepth": 3,
+      "stepSize": 0.1,
+      "seed": 42,
+      "feature_importances": {
+        "cur_precip_or_thunder": 0.058689565638549324,
+        "cur_low_visibility": 0.0038840313745833383,
+        "cur_visibility_km": 0.1775568497355651,
+        "cur_vicinity_weather": 0.00962072174462615,
+        "pos_obs_1h": 0.14620824149675465,
+        "pos_obs_3h": 0.11836506885919554,
+        "fc_rain_next_hour_mm": 0.0,
+        "forecast_missing": 0.0,
+        "b13_missing": 0.0,
+        "inner_bt_min_c": 0.0,
+        "inner_cold_cloud_fraction": 0.0,
+        "inner_severe_convection_fraction": 0.0,
+        "bt_delta_15m_c": 0.0,
+        "bt_delta_30m_c": 0.0,
+        "bt_delta_15m_missing": 0.0,
+        "bt_delta_30m_missing": 0.0,
+        "hour_sin": 0.11556135557056313,
+        "hour_cos": 0.2419797922489995,
+        "airport_VVDN": 0.04355725928248002,
+        "airport_VVNB": 0.024690687416048934,
+        "airport_VVTS": 0.05988642663263428
+      }
+    }
+  },
+  "metrics": {
+    "lr": {
+      "calibration": {
+        "method": "platt",
+        "a": 0.8021636363592687,
+        "b": 0.007225073434766617,
+        "identity": false
+      },
+      "threshold": 0.15764649905350822,
+      "threshold_fallback": false,
+      "validation_csi_at_threshold": 0.3352941176470588,
+      "validation": {
+        "hits": 57,
+        "misses": 51,
+        "false_alarms": 62,
+        "correct_negatives": 544,
+        "pod": 0.5277777777777778,
+        "far": 0.5210084033613446,
+        "csi": 0.3352941176470588,
+        "frequency_bias": 1.1018518518518519,
+        "n_events": 108,
+        "n": 714,
+        "pr_auc": 0.4813260035882717,
+        "brier": 0.10290096139798834,
+        "prevalence": 0.15126050420168066
+      },
+      "test": {
+        "all": {
+          "hits": 250,
+          "misses": 51,
+          "false_alarms": 84,
+          "correct_negatives": 623,
+          "pod": 0.8305647840531561,
+          "far": 0.25149700598802394,
+          "csi": 0.6493506493506493,
+          "frequency_bias": 1.1096345514950166,
+          "n_events": 301,
+          "n": 1008,
+          "pr_auc": 0.8832414664412045,
+          "brier": 0.08867901041635878,
+          "prevalence": 0.2986111111111111
+        },
+        "airport:VVDN": {
+          "hits": 153,
+          "misses": 17,
+          "false_alarms": 29,
+          "correct_negatives": 137,
+          "pod": 0.9,
+          "far": 0.15934065934065933,
+          "csi": 0.7688442211055276,
+          "frequency_bias": 1.0705882352941176,
+          "n_events": 170,
+          "n": 336,
+          "pr_auc": 0.9375305142818521,
+          "brier": 0.1059849461724111,
+          "prevalence": 0.5059523809523809
+        },
+        "airport:VVNB": {
+          "hits": 66,
+          "misses": 21,
+          "false_alarms": 35,
+          "correct_negatives": 214,
+          "pod": 0.7586206896551724,
+          "far": 0.3465346534653465,
+          "csi": 0.5409836065573771,
+          "frequency_bias": 1.160919540229885,
+          "n_events": 87,
+          "n": 336,
+          "pr_auc": 0.8405681218335226,
+          "brier": 0.0949050671173232,
+          "prevalence": 0.25892857142857145
+        },
+        "airport:VVTS": {
+          "hits": 31,
+          "misses": 13,
+          "false_alarms": 20,
+          "correct_negatives": 272,
+          "pod": 0.7045454545454546,
+          "far": 0.39215686274509803,
+          "csi": 0.484375,
+          "frequency_bias": 1.1590909090909092,
+          "n_events": 44,
+          "n": 336,
+          "pr_auc": 0.6907286835159292,
+          "brier": 0.0651470179593414,
+          "prevalence": 0.13095238095238096
+        },
+        "window:live_forecast_available": {
+          "hits": 185,
+          "misses": 34,
+          "false_alarms": 35,
+          "correct_negatives": 262,
+          "pod": 0.8447488584474886,
+          "far": 0.1590909090909091,
+          "csi": 0.7283464566929134,
+          "frequency_bias": 1.004566210045662,
+          "n_events": 219,
+          "n": 516,
+          "pr_auc": 0.9184526998770884,
+          "brier": 0.1103621622726289,
+          "prevalence": 0.42441860465116277
+        },
+        "window:backfill_forecast_missing": {
+          "hits": 65,
+          "misses": 17,
+          "false_alarms": 49,
+          "correct_negatives": 361,
+          "pod": 0.7926829268292683,
+          "far": 0.4298245614035088,
+          "csi": 0.4961832061068702,
+          "frequency_bias": 1.3902439024390243,
+          "n_events": 82,
+          "n": 492,
+          "pr_auc": 0.8029194471846555,
+          "brier": 0.06593814383539218,
+          "prevalence": 0.16666666666666666
+        }
+      },
+      "reliability_test": [
+        {
+          "bin_low": 0.0,
+          "bin_high": 0.1,
+          "n": 541,
+          "mean_predicted": 0.08168418840864043,
+          "observed_rate": 0.051756007393715345
+        },
+        {
+          "bin_low": 0.1,
+          "bin_high": 0.2,
+          "n": 172,
+          "mean_predicted": 0.1327970628331364,
+          "observed_rate": 0.19186046511627908
+        },
+        {
+          "bin_low": 0.2,
+          "bin_high": 0.3,
+          "n": 31,
+          "mean_predicted": 0.23036335340045522,
+          "observed_rate": 0.22580645161290322
+        },
+        {
+          "bin_low": 0.3,
+          "bin_high": 0.4,
+          "n": 6,
+          "mean_predicted": 0.3481515825229244,
+          "observed_rate": 0.5
+        },
+        {
+          "bin_low": 0.4,
+          "bin_high": 0.5,
+          "n": 13,
+          "mean_predicted": 0.4508791972109826,
+          "observed_rate": 0.6153846153846154
+        },
+        {
+          "bin_low": 0.5,
+          "bin_high": 0.6,
+          "n": 21,
+          "mean_predicted": 0.5517675604929352,
+          "observed_rate": 0.6666666666666666
+        },
+        {
+          "bin_low": 0.6,
+          "bin_high": 0.7,
+          "n": 50,
+          "mean_predicted": 0.6478144831783894,
+          "observed_rate": 0.88
+        },
+        {
+          "bin_low": 0.7,
+          "bin_high": 0.8,
+          "n": 81,
+          "mean_predicted": 0.7603327271252864,
+          "observed_rate": 0.9135802469135802
+        },
+        {
+          "bin_low": 0.8,
+          "bin_high": 0.9,
+          "n": 65,
+          "mean_predicted": 0.8397332144095953,
+          "observed_rate": 0.9538461538461539
+        },
+        {
+          "bin_low": 0.9,
+          "bin_high": 1.0,
+          "n": 28,
+          "mean_predicted": 0.9479038204815745,
+          "observed_rate": 1.0
+        }
+      ]
+    },
+    "gbt": {
+      "calibration": {
+        "method": "platt",
+        "a": 0.7979745959778437,
+        "b": -0.19331059119153082,
+        "identity": false
+      },
+      "threshold": 0.18444158365335095,
+      "threshold_fallback": false,
+      "validation_csi_at_threshold": 0.37714285714285717,
+      "validation": {
+        "hits": 66,
+        "misses": 42,
+        "false_alarms": 67,
+        "correct_negatives": 539,
+        "pod": 0.6111111111111112,
+        "far": 0.5037593984962406,
+        "csi": 0.37714285714285717,
+        "frequency_bias": 1.2314814814814814,
+        "n_events": 108,
+        "n": 714,
+        "pr_auc": 0.49787507349431803,
+        "brier": 0.10149166832938523,
+        "prevalence": 0.15126050420168066
+      },
+      "test": {
+        "all": {
+          "hits": 256,
+          "misses": 45,
+          "false_alarms": 74,
+          "correct_negatives": 633,
+          "pod": 0.8504983388704319,
+          "far": 0.22424242424242424,
+          "csi": 0.6826666666666666,
+          "frequency_bias": 1.0963455149501662,
+          "n_events": 301,
+          "n": 1008,
+          "pr_auc": 0.8783061850615158,
+          "brier": 0.08968261138810454,
+          "prevalence": 0.2986111111111111
+        },
+        "airport:VVDN": {
+          "hits": 158,
+          "misses": 12,
+          "false_alarms": 35,
+          "correct_negatives": 131,
+          "pod": 0.9294117647058824,
+          "far": 0.18134715025906736,
+          "csi": 0.7707317073170732,
+          "frequency_bias": 1.1352941176470588,
+          "n_events": 170,
+          "n": 336,
+          "pr_auc": 0.9169527865766008,
+          "brier": 0.10640001358462009,
+          "prevalence": 0.5059523809523809
+        },
+        "airport:VVNB": {
+          "hits": 68,
+          "misses": 19,
+          "false_alarms": 23,
+          "correct_negatives": 226,
+          "pod": 0.7816091954022989,
+          "far": 0.25274725274725274,
+          "csi": 0.6181818181818182,
+          "frequency_bias": 1.0459770114942528,
+          "n_events": 87,
+          "n": 336,
+          "pr_auc": 0.8421300832323391,
+          "brier": 0.09876583325841704,
+          "prevalence": 0.25892857142857145
+        },
+        "airport:VVTS": {
+          "hits": 30,
+          "misses": 14,
+          "false_alarms": 16,
+          "correct_negatives": 276,
+          "pod": 0.6818181818181818,
+          "far": 0.34782608695652173,
+          "csi": 0.5,
+          "frequency_bias": 1.0454545454545454,
+          "n_events": 44,
+          "n": 336,
+          "pr_auc": 0.7100179009572312,
+          "brier": 0.06388198732127703,
+          "prevalence": 0.13095238095238096
+        },
+        "window:live_forecast_available": {
+          "hits": 193,
+          "misses": 26,
+          "false_alarms": 36,
+          "correct_negatives": 261,
+          "pod": 0.8812785388127854,
+          "far": 0.1572052401746725,
+          "csi": 0.7568627450980392,
+          "frequency_bias": 1.0456621004566211,
+          "n_events": 219,
+          "n": 516,
+          "pr_auc": 0.903755335310747,
+          "brier": 0.10655148865771315,
+          "prevalence": 0.42441860465116277
+        },
+        "window:backfill_forecast_missing": {
+          "hits": 63,
+          "misses": 19,
+          "false_alarms": 38,
+          "correct_negatives": 372,
+          "pod": 0.7682926829268293,
+          "far": 0.37623762376237624,
+          "csi": 0.525,
+          "frequency_bias": 1.2317073170731707,
+          "n_events": 82,
+          "n": 492,
+          "pr_auc": 0.784019399469824,
+          "brier": 0.07199086205656398,
+          "prevalence": 0.16666666666666666
+        }
+      },
+      "reliability_test": [
+        {
+          "bin_low": 0.0,
+          "bin_high": 0.1,
+          "n": 575,
+          "mean_predicted": 0.06996755316224046,
+          "observed_rate": 0.043478260869565216
+        },
+        {
+          "bin_low": 0.1,
+          "bin_high": 0.2,
+          "n": 108,
+          "mean_predicted": 0.13924859283690436,
+          "observed_rate": 0.2037037037037037
+        },
+        {
+          "bin_low": 0.2,
+          "bin_high": 0.3,
+          "n": 43,
+          "mean_predicted": 0.24515366043350875,
+          "observed_rate": 0.2558139534883721
+        },
+        {
+          "bin_low": 0.3,
+          "bin_high": 0.4,
+          "n": 26,
+          "mean_predicted": 0.3584292103315523,
+          "observed_rate": 0.5769230769230769
+        },
+        {
+          "bin_low": 0.4,
+          "bin_high": 0.5,
+          "n": 28,
+          "mean_predicted": 0.4423754091140667,
+          "observed_rate": 0.6785714285714286
+        },
+        {
+          "bin_low": 0.5,
+          "bin_high": 0.6,
+          "n": 29,
+          "mean_predicted": 0.5523904531944072,
+          "observed_rate": 0.8620689655172413
+        },
+        {
+          "bin_low": 0.6,
+          "bin_high": 0.7,
+          "n": 46,
+          "mean_predicted": 0.6593546543795117,
+          "observed_rate": 0.8695652173913043
+        },
+        {
+          "bin_low": 0.7,
+          "bin_high": 0.8,
+          "n": 52,
+          "mean_predicted": 0.7488322254818912,
+          "observed_rate": 0.9615384615384616
+        },
+        {
+          "bin_low": 0.8,
+          "bin_high": 0.9,
+          "n": 85,
+          "mean_predicted": 0.8506627684185346,
+          "observed_rate": 0.9176470588235294
+        },
+        {
+          "bin_low": 0.9,
+          "bin_high": 1.0,
+          "n": 16,
+          "mean_predicted": 0.9191996505780051,
+          "observed_rate": 1.0
+        }
+      ]
+    }
+  },
+  "baselines": {
+    "persistence": {
+      "all": {
+        "hits": 231,
+        "misses": 70,
+        "false_alarms": 28,
+        "correct_negatives": 679,
+        "pod": 0.7674418604651163,
+        "far": 0.10810810810810811,
+        "csi": 0.7021276595744681,
+        "frequency_bias": 0.8604651162790697,
+        "n_events": 301,
+        "n": 1008
+      },
+      "airport:VVDN": {
+        "hits": 141,
+        "misses": 29,
+        "false_alarms": 11,
+        "correct_negatives": 155,
+        "pod": 0.8294117647058824,
+        "far": 0.07236842105263158,
+        "csi": 0.7790055248618785,
+        "frequency_bias": 0.8941176470588236,
+        "n_events": 170,
+        "n": 336
+      },
+      "airport:VVNB": {
+        "hits": 62,
+        "misses": 25,
+        "false_alarms": 11,
+        "correct_negatives": 238,
+        "pod": 0.7126436781609196,
+        "far": 0.1506849315068493,
+        "csi": 0.6326530612244898,
+        "frequency_bias": 0.8390804597701149,
+        "n_events": 87,
+        "n": 336
+      },
+      "airport:VVTS": {
+        "hits": 28,
+        "misses": 16,
+        "false_alarms": 6,
+        "correct_negatives": 286,
+        "pod": 0.6363636363636364,
+        "far": 0.17647058823529413,
+        "csi": 0.56,
+        "frequency_bias": 0.7727272727272727,
+        "n_events": 44,
+        "n": 336
+      },
+      "window:live_forecast_available": {
+        "hits": 174,
+        "misses": 45,
+        "false_alarms": 18,
+        "correct_negatives": 279,
+        "pod": 0.7945205479452054,
+        "far": 0.09375,
+        "csi": 0.7341772151898734,
+        "frequency_bias": 0.8767123287671232,
+        "n_events": 219,
+        "n": 516
+      },
+      "window:backfill_forecast_missing": {
+        "hits": 57,
+        "misses": 25,
+        "false_alarms": 10,
+        "correct_negatives": 400,
+        "pod": 0.6951219512195121,
+        "far": 0.14925373134328357,
+        "csi": 0.6195652173913043,
+        "frequency_bias": 0.8170731707317073,
+        "n_events": 82,
+        "n": 492
+      }
+    },
+    "open_meteo_only": {
+      "all": {
+        "hits": 178,
+        "misses": 123,
+        "false_alarms": 80,
+        "correct_negatives": 627,
+        "pod": 0.5913621262458472,
+        "far": 0.31007751937984496,
+        "csi": 0.4671916010498688,
+        "frequency_bias": 0.8571428571428571,
+        "n_events": 301,
+        "n": 1008
+      },
+      "airport:VVDN": {
+        "hits": 151,
+        "misses": 19,
+        "false_alarms": 21,
+        "correct_negatives": 145,
+        "pod": 0.888235294117647,
+        "far": 0.12209302325581395,
+        "csi": 0.7905759162303665,
+        "frequency_bias": 1.011764705882353,
+        "n_events": 170,
+        "n": 336
+      },
+      "airport:VVNB": {
+        "hits": 17,
+        "misses": 70,
+        "false_alarms": 7,
+        "correct_negatives": 242,
+        "pod": 0.19540229885057472,
+        "far": 0.2916666666666667,
+        "csi": 0.18085106382978725,
+        "frequency_bias": 0.27586206896551724,
+        "n_events": 87,
+        "n": 336
+      },
+      "airport:VVTS": {
+        "hits": 10,
+        "misses": 34,
+        "false_alarms": 52,
+        "correct_negatives": 240,
+        "pod": 0.22727272727272727,
+        "far": 0.8387096774193549,
+        "csi": 0.10416666666666667,
+        "frequency_bias": 1.4090909090909092,
+        "n_events": 44,
+        "n": 336
+      },
+      "window:live_forecast_available": {
+        "hits": 178,
+        "misses": 41,
+        "false_alarms": 80,
+        "correct_negatives": 217,
+        "pod": 0.8127853881278538,
+        "far": 0.31007751937984496,
+        "csi": 0.5953177257525084,
+        "frequency_bias": 1.178082191780822,
+        "n_events": 219,
+        "n": 516
+      },
+      "window:backfill_forecast_missing": {
+        "hits": 0,
+        "misses": 82,
+        "false_alarms": 0,
+        "correct_negatives": 410,
+        "pod": 0.0,
+        "far": null,
+        "csi": 0.0,
+        "frequency_bias": 0.0,
+        "n_events": 82,
+        "n": 492
+      }
+    },
+    "current_rule_l1_or_l3": {
+      "all": {
+        "hits": 260,
+        "misses": 41,
+        "false_alarms": 97,
+        "correct_negatives": 610,
+        "pod": 0.8637873754152824,
+        "far": 0.27170868347338933,
+        "csi": 0.6532663316582915,
+        "frequency_bias": 1.186046511627907,
+        "n_events": 301,
+        "n": 1008
+      },
+      "airport:VVDN": {
+        "hits": 160,
+        "misses": 10,
+        "false_alarms": 25,
+        "correct_negatives": 141,
+        "pod": 0.9411764705882353,
+        "far": 0.13513513513513514,
+        "csi": 0.8205128205128205,
+        "frequency_bias": 1.088235294117647,
+        "n_events": 170,
+        "n": 336
+      },
+      "airport:VVNB": {
+        "hits": 68,
+        "misses": 19,
+        "false_alarms": 16,
+        "correct_negatives": 233,
+        "pod": 0.7816091954022989,
+        "far": 0.19047619047619047,
+        "csi": 0.6601941747572816,
+        "frequency_bias": 0.9655172413793104,
+        "n_events": 87,
+        "n": 336
+      },
+      "airport:VVTS": {
+        "hits": 32,
+        "misses": 12,
+        "false_alarms": 56,
+        "correct_negatives": 236,
+        "pod": 0.7272727272727273,
+        "far": 0.6363636363636364,
+        "csi": 0.32,
+        "frequency_bias": 2.0,
+        "n_events": 44,
+        "n": 336
+      },
+      "window:live_forecast_available": {
+        "hits": 203,
+        "misses": 16,
+        "false_alarms": 87,
+        "correct_negatives": 210,
+        "pod": 0.9269406392694064,
+        "far": 0.3,
+        "csi": 0.6633986928104575,
+        "frequency_bias": 1.3242009132420092,
+        "n_events": 219,
+        "n": 516
+      },
+      "window:backfill_forecast_missing": {
+        "hits": 57,
+        "misses": 25,
+        "false_alarms": 10,
+        "correct_negatives": 400,
+        "pod": 0.6951219512195121,
+        "far": 0.14925373134328357,
+        "csi": 0.6195652173913043,
+        "frequency_bias": 0.8170731707317073,
+        "n_events": 82,
+        "n": 492
+      }
+    }
+  },
+  "selected_model": "gbt",
+  "selection_rule": "higher validation CSI at its own validation threshold (ties -> lr)",
+  "threshold": 0.18444158365335095,
+  "calibration": {
+    "method": "platt",
+    "a": 0.7979745959778437,
+    "b": -0.19331059119153082,
+    "identity": false
+  },
+  "gate": {
+    "gate_passed": false,
+    "model_csi_test": 0.6826666666666666,
+    "best_baseline": "persistence",
+    "best_baseline_csi_test": 0.7021276595744681,
+    "baseline_csi_test": {
+      "persistence": 0.7021276595744681,
+      "open_meteo_only": 0.4671916010498688,
+      "current_rule_l1_or_l3": 0.6532663316582915
+    },
+    "rule": "gate_passed = CSI_test(selected model) > max(CSI_test of persistence, open_meteo_only, current_rule_l1_or_l3)"
+  },
+  "gate_passed": false,
+  "explanation_method": "gbt_importance_x_abs_standardized_value",
+  "limitations": [
+    "Open-Meteo forecasts exist only since collection started: forecast_missing=1 for the whole training window when the live window is shorter than the held-out week, so forecast features cannot be learned.",
+    "Overlapping 60-minute labels at 30-minute sampling make rows strongly autocorrelated; CIs are not reported for model metrics.",
+    "B13 coverage is sparse; b13_missing=1 for most rows."
+  ]
+}

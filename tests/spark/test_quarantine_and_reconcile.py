@@ -15,7 +15,7 @@ from tests.spark.real_data import (
 
 
 def test_metar_quarantine_and_reconciliation_invariant(spark: SparkSession):
-    raw_df = read_raw_metar(spark, "data/raw/metar/date=2026-11-09/*.json")
+    raw_df = real_raw_metar(spark)
     valid_df, q_df, rec = validate_and_split_metar(raw_df)
 
     assert rec["is_reconciled"] is True
@@ -26,7 +26,7 @@ def test_metar_quarantine_and_reconciliation_invariant(spark: SparkSession):
 
 
 def test_open_meteo_quarantine_and_reconciliation_invariant(spark: SparkSession):
-    raw_df = read_raw_open_meteo(spark, "data/raw/open_meteo/date=2026-11-09/*.json")
+    raw_df = real_raw_open_meteo(spark)
     valid_df, q_df, rec = validate_and_split_open_meteo(raw_df)
 
     assert rec["is_reconciled"] is True
@@ -35,7 +35,7 @@ def test_open_meteo_quarantine_and_reconciliation_invariant(spark: SparkSession)
 
 
 def test_himawari_quarantine_and_reconciliation_invariant(spark: SparkSession):
-    raw_df = read_raw_himawari_metrics(spark, "data/raw/himawari_metrics/date=2026-11-09/*.json")
+    raw_df = real_raw_himawari_metrics(spark)
     valid_df, q_df, rec = validate_and_split_himawari(raw_df)
 
     assert rec["is_reconciled"] is True
@@ -44,9 +44,9 @@ def test_himawari_quarantine_and_reconciliation_invariant(spark: SparkSession):
 
 
 def test_comprehensive_reconciliation_report(spark: SparkSession):
-    m_raw = read_raw_metar(spark, "data/raw/metar/date=2026-11-09/*.json")
-    f_raw = read_raw_open_meteo(spark, "data/raw/open_meteo/date=2026-11-09/*.json")
-    h_raw = read_raw_himawari_metrics(spark, "data/raw/himawari_metrics/date=2026-11-09/*.json")
+    m_raw = real_raw_metar(spark)
+    f_raw = real_raw_open_meteo(spark)
+    h_raw = real_raw_himawari_metrics(spark)
 
     _, _, m_rec = validate_and_split_metar(m_raw)
     _, _, f_rec = validate_and_split_open_meteo(f_raw)

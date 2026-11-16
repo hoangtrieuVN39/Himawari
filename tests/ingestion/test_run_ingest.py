@@ -163,7 +163,7 @@ def test_run_himawari_slot_pipeline_archive_fallback(mocker):
         "src.ingestion.run_ingest.download_himawari_slot",
         side_effect=[
             {"status": "FAILED", "files": {}},
-            {"status": "SUCCESS", "files": {"S0410": "resolved_s3_path"}},
+            {"status": "SUCCESS", "files": {"S0410": "resolved_s3_path"}, "source_slot_utc": "2025-01-01T08:00:00Z"},
         ],
     )
     mock_find_latest = mocker.patch(
@@ -187,9 +187,9 @@ def test_run_himawari_slot_pipeline_archive_fallback(mocker):
 
     assert mock_find_latest.called
     assert mock_dl.call_count == 2
-    # Verify process_himawari_slot received the requested 2026 timeline slot_iso
+    # The substituted scan keeps its real time; it must not be relabelled as the requested slot
     mock_proc.assert_called_once()
-    assert mock_proc.call_args.kwargs["scan_slot_utc"] == "2026-11-09T08:00:00Z"
+    assert mock_proc.call_args.kwargs["scan_slot_utc"] == "2025-01-01T08:00:00Z"
 
 
 def test_run_himawari_window_backfill(mocker):

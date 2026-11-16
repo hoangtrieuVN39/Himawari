@@ -10,7 +10,7 @@ from tests.spark.real_data import (
 
 
 def test_read_real_metar_raw_envelopes(spark: SparkSession):
-    df = read_raw_metar(spark, "data/raw/metar/date=2026-11-09/*.json")
+    df = real_raw_metar(spark)
     assert df.count() > 0
     assert "airport_icao" in df.columns
     assert "observed_at_utc" in df.columns
@@ -24,7 +24,7 @@ def test_read_real_metar_raw_envelopes(spark: SparkSession):
 
 
 def test_read_real_open_meteo_raw_envelopes(spark: SparkSession):
-    df = read_raw_open_meteo(spark, "data/raw/open_meteo/date=2026-11-09/*.json")
+    df = real_raw_open_meteo(spark)
     assert df.count() > 0
     assert "forecast_valid_at_utc" in df.columns
     assert "precipitation_mm" in df.columns
@@ -37,7 +37,7 @@ def test_read_real_open_meteo_raw_envelopes(spark: SparkSession):
 
 
 def test_read_real_himawari_metrics_envelopes(spark: SparkSession):
-    df = read_raw_himawari_metrics(spark, "data/raw/himawari_metrics/date=2026-11-09/*.json")
+    df = real_raw_himawari_metrics(spark)
     assert df.count() > 0
     assert "scan_time_utc" in df.columns
     assert "b13_valid_fraction" in df.columns

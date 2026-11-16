@@ -20,12 +20,11 @@ from src.dashboard import components as c
 from src.dashboard.data_loader import (
     fetch_and_update_realtime,
     get_b13_image_sequence,
-    has_unsynced_raw_data,
+    has_new_decision_version,
     load_audit_and_reconciliation,
     load_decision_slots,
     normalize_timestamp_pair,
     sort_slot_rows,
-    sync_latest_raw_to_decision_table,
 )
 from src.dashboard.kpi_evaluator import (
     append_kpi_trial,
@@ -36,6 +35,7 @@ from src.dashboard.kpi_evaluator import (
 from src.dashboard.views import ViewContext, active_trial_view_mode, baseline_trial_in_progress
 from src.dashboard.views.audit import render_audit
 from src.dashboard.views.decision import render_decision
+from src.dashboard.views.health import render_health_tab
 from src.dashboard.views.kpi import VIEW_LABELS, render_kpi
 from src.dashboard.views.sidebar import SORT_OPTIONS, render_sidebar  # noqa: F401 - re-exported
 from src.spark.replay_slots import load_replay_slots
@@ -48,7 +48,7 @@ AIRPORT_NAMES: dict[str, str] = {
     "VVTS": "Tân Sơn Nhất (VVTS)",
 }
 
-TAB_LABELS = ["Quyết định", "Đo KPI", "Đối soát dữ liệu"]
+TAB_LABELS = ["Quyết định", "Đo KPI", "Đối soát dữ liệu", "Sức khỏe hệ thống"]
 
 
 def _make_tabs(labels: list[str]):
@@ -107,12 +107,7 @@ def main() -> None:
     c.inject_theme()
 
     storage_root = STORAGE_ROOT
-    sync_error = None
-    # Explicit, cached (signature-based) sync of newly ingested raw batches; reads below are read-only.
-    try:
-        sync_latest_raw_to_decision_table(storage_root)
-    except Exception as exc:  # noqa: BLE001 - surfaced to the user
-        sync_error = exc
+    # Read-only: Spark (batch run or long-lived runner) is the only writer of the Gold decision table.
     slots = load_decision_slots(storage_root)
 
     replay_slots = load_replay_slots()
@@ -125,7 +120,7 @@ def main() -> None:
         replay_slots=replay_slots,
         slot_hhmm=_slot_hhmm,
         fetch_realtime=fetch_and_update_realtime,
-        has_unsynced=has_unsynced_raw_data,
+        has_unsynced=has_new_decision_version,
     )
     selected_slot = choice.selected_slot
     rows = sort_slot_rows(slots.get(selected_slot, []), sort_mode=choice.sort_mode)
@@ -139,10 +134,11 @@ def main() -> None:
         context = f"Lượt thử: {VIEW_LABELS.get(mode, mode)}"
     st.html(c.page_header(choice.is_live_mode, utc, vn, date_vn, context))
 
-    if sync_error is not None:
-        st.warning(f"**Đồng bộ dữ liệu thất bại.** Đang hiển thị mốc gần nhất đã lưu. Chi tiết: {sync_error}")
     if not slots:
-        st.error("Không tìm thấy bảng quyết định trong `data/processed/decision_table/`. Chạy lại pipeline để tạo.")
+        st.error(
+            "Không tìm thấy bảng quyết định Gold trong `data/lake/gold/decision_table/`. "
+            "Chạy `python -m src.spark.run_pipeline` để tạo."
+        )
 
     ctx = ViewContext(
         storage_root=storage_root,
@@ -162,7 +158,7 @@ def main() -> None:
         },
     )
 
-    (tab1, tab2, tab3), lazy_tabs = _make_tabs(TAB_LABELS)
+    (tab1, tab2, tab3, tab4), lazy_tabs = _make_tabs(TAB_LABELS)
     if _tab_active(tab1, lazy_tabs):
         with tab1:
             render_decision(ctx)
@@ -172,6 +168,9 @@ def main() -> None:
     if _tab_active(tab3, lazy_tabs):
         with tab3:
             render_audit(ctx)
+    if _tab_active(tab4, lazy_tabs):
+        with tab4:
+            render_health_tab(storage_root)
 
 
 __all__ = ["main", "baseline_trial_in_progress"]
