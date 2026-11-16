@@ -24,3 +24,7 @@ data/.sync-snapshot/
 # Local harness records and dummy data
 .harness/
 dummy_data/
+
+# Packaged submission sample (scripts/package_sample.py) and runtime runner heartbeat
+dist/
+data/lake/_runner_heartbeat.json

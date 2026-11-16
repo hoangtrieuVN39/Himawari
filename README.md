@@ -24,19 +24,22 @@ Hệ thống bao gồm ba tầng xử lý dữ liệu phối hợp:
 - **Đồng bộ Lưu trữ Hadoop HDFS (WebHDFS REST):** Tự động đẩy dữ liệu sang Hadoop HDFS (`/data/raw/`, `/data/processed/`), đo kiểm và ghi nhật ký thông lượng (MB/s) vào `data/logs/hdfs_sync_log.jsonl`.
 
 ### 3. Mô-đun 3: Xử lý Dữ liệu Lớn với PySpark & Động cơ Phân cấp Ưu tiên
-- **Đọc Dữ liệu Thô theo Schema Chặt chẽ:** Đọc trực tiếp các tệp JSON METAR, Open-Meteo và Himawari Metrics từ thư mục cục bộ hoặc Hadoop HDFS.
-- **Cách ly Lỗi (Quarantine) & Đối soát Bảo toàn Dòng (Reconciliation):** Tách biệt các bản ghi lỗi cấu trúc, thiếu khóa bắt buộc hoặc vi phạm ngưỡng vật lý vào `data/processed/quarantine/`. Đảm bảo bất biến đối soát `rows_read == rows_valid_pre_dedup + rows_quarantined` và xuất báo cáo tại `data/processed/reconciliation/reconciliation_summary.json`.
+- **Đọc Dữ liệu Thô theo Schema Chặt chẽ:** Đọc các shard JSONL (Bronze) của METAR, Open-Meteo và Himawari Metrics từ layout đang active trên đĩa cục bộ (`--storage-root data`) hoặc từ HDFS (`--storage-root hdfs://namenode:9000/data`).
+- **Cách ly Lỗi (Quarantine) & Đối soát Bảo toàn Dòng (Reconciliation):** Tách biệt các bản ghi lỗi cấu trúc, thiếu khóa bắt buộc hoặc vi phạm ngưỡng vật lý vào bảng Silver `quarantine`. Đảm bảo bất biến đối soát `rows_read == rows_valid_pre_dedup + rows_quarantined` và ghi bảng Gold `reconciliation`.
 - **Chuẩn hóa Khí tượng & Phân loại Mây Vệ tinh:** Chuẩn hóa tầm nhìn (giới hạn 9999m), trích xuất mã thời tiết mưa/dông (`-RA`, `TSRA`, `SHRA`, v.v.), gắn nhãn tầng mây đối lưu B13 (`SEVERE_CONVECTIVE_CORE`, `COLD_OPAQUE_CORE`, v.v.).
 - **Ghép Dữ liệu theo Điểm Thời gian (Point-in-Time Join):** Tránh rò rỉ dữ liệu tương lai (zero future data leakage) bằng cách chỉ liên kết các bản ghi có thời điểm tạo/quan trắc trước hoặc đúng thời điểm rà soát (`review_slot_utc`).
 - **Động cơ Phân cấp Ưu tiên Đa yếu tố (Levels 1–4):** Xếp hạng độ nguy hiểm thời tiết theo 4 cấp bậc và xử lý đồng mức ưu tiên (`co-priority ties`) công bằng, kèm giải thích tiếng Việt tường minh.
-- **Bảng Quyết định (Decision Table):** Xuất bảng dữ liệu 3 dòng/lượt rà soát (mỗi sân bay 1 dòng) dạng JSONL/Parquet phục vụ Dashboard Streamlit ở Mô-đun 4.
+- **Bảng Quyết định (Decision Table):** Ghi bảng Gold `decision_table` 3 dòng/lượt rà soát (mỗi sân bay 1 dòng) dạng Parquet, kèm `slot_kind`, `inputs_complete_at_utc`, `first_published_at_utc`.
+- **Lake Parquet có phiên bản (Medallion):** Bronze (`data/raw_compact`) → Silver (`data/lake/silver/…`) → Gold (`data/lake/gold/…`). Mỗi lần chạy commit một phiên bản bất biến `run_id=…` (hiển thị khi có `_SUCCESS`, giữ 2 phiên bản mới nhất), ghi được cả lên đĩa cục bộ lẫn `hdfs://` (`--lake-root`). Chi tiết: [`docs/architecture/`](docs/architecture/).
+- **Runner Spark chạy lâu dài:** `run_pipeline --loop` giữ một SparkSession và công bố lại Gold mỗi khi Bronze thay đổi (khoảng 18 s mỗi chu kỳ ấm).
 
 ### 4. Mô-đun 4: Dashboard Streamlit Rà soát Quyết định, Phát lại Lịch sử (Replay), Đo lường KPI & Đối soát Chất lượng Dữ liệu
-- **Giao diện Đa Tab Trực quan:** Cấu trúc 3 Tab đáp ứng nghiệp vụ điều phối viên, đo lường thực nghiệm CLO4 và đối soát kỹ thuật CLO2/CLO3. Nạp dữ liệu tức thì (< 1s) ở chế độ ngoại tuyến (Offline Ready).
+- **Giao diện Đa Tab Trực quan:** 4 Tab: Quyết định, Đo KPI, Đối soát dữ liệu, Sức khỏe hệ thống. Dashboard **chỉ đọc** lake Gold; Spark là nguồn sự thật duy nhất cho mức ưu tiên. Nạp dữ liệu tức thì (< 1s) ở chế độ ngoại tuyến (Offline Ready).
 - **Bảng Rà soát Quyết định & Xử lý Đồng mức (Tab 1):** Hiển thị song song giờ UTC (`HH:MMZ`) và Giờ Việt Nam (`ICT`), nêu bật sân bay ưu tiên và banner cảnh báo màu cam khi có đồng mức ưu tiên đầu (`Co-Priority Tie`), hỗ trợ đảo thứ tự dòng hiển thị mà không ảnh hưởng kết quả.
 - **Truy nguyên Bằng chứng 3 Nguồn (Provenance Drill-Down):** Bản tin METAR gốc (giờ nhận, tuổi dữ liệu, hiện tượng thời tiết), mã dự báo mưa Open-Meteo, và chuỗi tối đa 6 ảnh vệ tinh Himawari-9 B13 trước sự kiện (Time-Lapse 10 phút/ảnh) kèm bộ chỉ số Dual-Box ($\pm 1.0^\circ$ và $\pm 0.25^\circ$).
 - **Đo lường & Chấm điểm Tự động KPI (Tab 2 — CLO4):** Tích hợp bộ bấm giờ nhận ca, đối chiếu giữa chế độ Xem 3 Nguồn Rời (Baseline) và Xem Dashboard Tổng hợp, tự động chấm điểm và tính toán % rút ngắn thời gian trung vị đạt mục tiêu $\ge 30\%$.
 - **Đối soát Bảo toàn Dòng & Quarantine (Tab 3 — CLO2/CLO3):** Bảng đối soát bảo toàn dòng cho cả 3 nguồn, trình xem bản ghi cách ly lỗi, nhật ký lỗi tệp nhị phân và thống kê thông lượng Hadoop HDFS.
+- **Sức khỏe hệ thống (Tab 4):** SLA độ mới từng nguồn, độ phủ lượt quét, nguyên nhân khoảng thiếu (nguồn thiếu / lỗi máy thu), bất thường (MAD), trôi dữ liệu (PSI), độ trễ công bố P50/P95 và thời gian từng giai đoạn Spark.
 
 ---
 
@@ -59,6 +62,19 @@ Backfill toàn bộ các khung thời gian 10 phút trong khoảng thời gian x
 ```bash
 .venv\Scripts\python.exe -m src.ingestion.run_ingest --himawari-window 2026-11-09T06:00:00Z 2026-11-09T08:30:00Z
 ```
+
+**Tải bù dài ngày (big-data backfill):**
+```bash
+# METAR tối đa 30 ngày: AWC giữ 30 ngày, 400 bản ghi/request; gọi theo từng sân bay × 24 h, throttle 0,7 s
+.venv\Scripts\python.exe -m src.ingestion.run_ingest --backfill-days 30
+
+# Himawari phân tán bằng Spark (luôn tải đủ S0410 + S0510). Nên chạy ở ổ đĩa còn nhiều chỗ trống,
+# rồi nhập phần metrics (nhỏ) vào Bronze của dự án
+.venv\Scripts\python.exe -m src.spark.himawari_batch --start 2026-11-09T00:00:00Z --end 2026-11-15T23:50:00Z --parallelism 2 --base-dir D:/DLL_backfill/data
+.venv\Scripts\python.exe -m src.ingestion.import_metrics --from D:/DLL_backfill/data --to data
+```
+Đo B8: khoảng 19 s/lượt quét khi chạy tuần tự, 5,67 MB tải về mỗi lượt quét. Chạy p=4 nhanh hơn 2,44×, nên 7 ngày mất khoảng 2,5 h.
+Open-Meteo không có tải bù: ca lịch sử thiếu dự báo thì hiển thị "dự báo khuyết".
 
 ### 4. Đồng bộ Thư mục Dữ liệu sang Hadoop HDFS & Đo Thông lượng
 ```bash
@@ -106,17 +122,26 @@ Xem nhật ký phát hiện tại `data/logs/himawari_file_errors.jsonl`.
   ```
 
 ### 8. Chạy Pipeline PySpark & Động cơ Phân cấp Ưu tiên (Mô-đun 3)
-Chạy pipeline phân tích dữ liệu, đối soát và sinh bảng quyết định:
-- **Chế độ Replay lịch sử (ví dụ các mốc 14:00 và 15:00 UTC):**
+Chạy pipeline phân tích dữ liệu, đối soát và commit lake Silver/Gold (`data/lake/`):
+- **Mặc định (`--review-slots all`):** các mốc replay trong `config/replay_slots.json` cộng mọi mốc live (giờ lấy METAR không phải tải bù, làm tròn lên 5 phút):
+  ```bash
+  .venv\Scripts\python.exe -m src.spark.run_pipeline --storage-root data
+  ```
+- **Chỉ một số mốc (replay):**
   ```bash
   .venv\Scripts\python.exe -m src.spark.run_pipeline --storage-root data --mode replay --review-slots "2026-11-09T07:00:00Z,2026-11-09T08:00:00Z"
   ```
-- **Chế độ Live (lấy mốc mới nhất hiện có):**
+- **`--review-slots auto`:** các mốc replay cộng mốc live mới nhất. `--mode live` yêu cầu METAR/B13 phải được lấy về trước mốc. Dự báo luôn phải được lấy về trước mốc ở mọi chế độ.
+- **Runner chạy lâu dài (khuyến nghị khi demo LIVE):**
   ```bash
-  .venv\Scripts\python.exe -m src.spark.run_pipeline --storage-root data --mode live
+  .venv\Scripts\python.exe -m src.spark.run_pipeline --storage-root data --loop --poll-seconds 15
+  docker compose --profile spark up -d spark-runner   # hoặc chạy trong Docker
   ```
-- **`--review-slots auto` (mặc định):** gộp các mốc replay chuẩn `07:00Z`, `08:00Z`, `11:00Z` với mốc METAR live mới nhất đang có trên đĩa. Pipeline chỉ đọc layout đang active (`daily_jsonl` hoặc `legacy_files`), không bao giờ gộp cả hai.
-- **Lưu ý hiệu năng:** trên Windows mỗi lần chạy pipeline Spark mất khoảng 2 phút (khởi động JVM + nhiều job), nên bộ test `tests/spark` chạy lâu; đây không phải treo.
+- **Ghi lake lên HDFS** (chạy trong container để phân giải được `datanode`):
+  ```bash
+  docker compose --profile spark run --rm spark-processor python -m src.spark.run_pipeline --storage-root hdfs://namenode:9000/data --lake-root hdfs://namenode:9000/lake
+  ```
+- **Hiệu năng (đo 2026-11-16, 134 mốc):** lần chạy lạnh khoảng 52 s, lần chạy ấm khoảng 18 s. Thời gian từng giai đoạn được ghi vào `data/logs/pipeline_runs.jsonl`. Trước đây mỗi lần chạy mất khoảng 3,5 phút; nguyên nhân là spine dựng bằng Python RDD (xem ADR-004).
 - **Kiểm thử cách ly bản ghi hỏng (Synthetic Quarantine Test):**
   ```bash
   .venv\Scripts\python.exe -m src.spark.run_pipeline --inject-quarantine-test

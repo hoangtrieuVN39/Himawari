@@ -44,6 +44,23 @@ services:
     depends_on:
       - namenode
 
+  spark-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: airport_weather_spark_runner
+    profiles: ["spark"]
+    restart: unless-stopped
+    volumes:
+      - ./config:/app/config:ro
+      - ./src:/app/src:ro
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SPARK_LOCAL_IP=127.0.0.1
+    # One SparkSession; re-publishes the Gold lake whenever Bronze changes (ADR-004)
+    command: ["python", "-m", "src.spark.run_pipeline", "--loop"]
+
   dashboard:
     build: .
     container_name: weather-dashboard
