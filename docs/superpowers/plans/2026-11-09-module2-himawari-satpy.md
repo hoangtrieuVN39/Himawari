@@ -34,31 +34,31 @@
 
 ---
 
-### Task 0: Update Project Proposal Document (`Big data - Kế hoạch dự án nhóm.md`)
+### Task 0: Update Project Proposal Document (`docs/ke-hoach-nhom.md`)
 
 **Files:**
-- Modify: `Big data - Kế hoạch dự án nhóm.md`
+- Modify: `docs/ke-hoach-nhom.md`
 
 **Interfaces:**
 - Consumes: Architectural decisions from `docs/superpowers/specs/2026-11-09-module2-himawari-satpy-design.md`
-- Produces: Updated Sections 2, 3, 4, and 6 in `Big data - Kế hoạch dự án nhóm.md` reflecting Dual-Mode Storage (Local + Hadoop HDFS in Docker + Parquet), Himawari-9 B13 segments (`S0410`, `S0510`), Dual-Box geometry ($\pm 1.0^\circ$ & $\pm 0.25^\circ$), physical thresholds ($150\text{ K}-340\text{ K}$, $<235\text{ K}$, $<220\text{ K}$), and retention policy.
+- Produces: Updated Sections 2, 3, 4, and 6 in `docs/ke-hoach-nhom.md` reflecting Dual-Mode Storage (Local + Hadoop HDFS in Docker + Parquet), Himawari-9 B13 segments (`S0410`, `S0510`), Dual-Box geometry ($\pm 1.0^\circ$ & $\pm 0.25^\circ$), physical thresholds ($150\text{ K}-340\text{ K}$, $<235\text{ K}$, $<220\text{ K}$), and retention policy.
 
-- [ ] **Step 1: Update Section 2 (Dữ liệu, 5V và quản trị) in `Big data - Kế hoạch dự án nhóm.md`**
+- [ ] **Step 1: Update Section 2 (Dữ liệu, 5V và quản trị) in `docs/ke-hoach-nhom.md`**
 
 Specify segments `S0410` (covering `VVDN`, `VVNB`) and `S0510` (covering `VVTS`), Dual-Box cropping ($\pm 1.0^\circ$ outer context box and $\pm 0.25^\circ$ inner station box), raw `.DAT.bz2` retention policy (keeping pinned replay windows and cleaning up processed segments older than 24h), and expand the Data Dictionary with `b13_valid_fraction`, `inner_bt_min_c`, `inner_cold_cloud_fraction` ($T_b < 235\text{ K}$), and `inner_severe_convection_fraction` ($T_b < 220\text{ K}$).
 
-- [ ] **Step 2: Update Section 3 (Kiến trúc và ma trận lưu trữ — CLO2) in `Big data - Kế hoạch dự án nhóm.md`**
+- [ ] **Step 2: Update Section 3 (Kiến trúc và ma trận lưu trữ — CLO2) in `docs/ke-hoach-nhom.md`**
 
 Update the processing flow and Storage Matrix table to include **Dual-Mode: Kho tệp cục bộ + Hadoop HDFS (Single-Node Docker `namenode:9870` / `hdfs://namenode:9000`) + Parquet** compared against **PostgreSQL**, detailing Auto Dual-Write + `sync_to_hdfs` and empirical HDFS throughput measurement (`hdfs_sync_log.jsonl`).
 
-- [ ] **Step 3: Update Section 4 & Section 6 (Quy tắc ngưỡng B13, Kiểm thử tệp hỏng & Quản lý rủi ro) in `Big data - Kế hoạch dự án nhóm.md`**
+- [ ] **Step 3: Update Section 4 & Section 6 (Quy tắc ngưỡng B13, Kiểm thử tệp hỏng & Quản lý rủi ro) in `docs/ke-hoach-nhom.md`**
 
 Document the physical validity range $[150\text{ K}, 340\text{ K}]$, convective thresholds ($<235\text{ K}$ and $<220\text{ K}$), corrupted binary file log (`himawari_file_errors.jsonl` with `is_synthetic_test`), and Docker Compose environment reproducibility.
 
 - [ ] **Step 4: Verify markdown formatting and commit**
 
 ```bash
-git add "Big data - Kế hoạch dự án nhóm.md"
+git add "docs/ke-hoach-nhom.md"
 git commit -m "docs(plan): update project proposal with Hadoop HDFS dual-mode and Himawari-9 B13 specs"
 ```
 

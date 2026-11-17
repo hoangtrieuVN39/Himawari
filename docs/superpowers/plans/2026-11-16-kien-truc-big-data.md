@@ -1,7 +1,7 @@
 # Kế hoạch: Kiến trúc Big Data và lớp phân tích nâng cao
 
 > Trạng thái: **ĐÃ DUYỆT, ĐÃ TRIỂN KHAI** (2026-11-16). Kết quả và số đo nằm trong `docs/architecture/`.
-> Căn cứ: mã nguồn hiện tại, `README.md`, `Big data - Kế hoạch dự án nhóm.md` (bản của nhóm).
+> Căn cứ: mã nguồn hiện tại, `README.md`, `docs/ke-hoach-nhom.md` (bản của nhóm).
 > Spec Lark "Big data - Kế hoạch dự án nhóm" (cập nhật 09/11) **chỉ dùng để tham khảo**, không ràng buộc.
 
 ## 1. Tổng quan

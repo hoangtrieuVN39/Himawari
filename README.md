@@ -7,6 +7,29 @@ Theo dõi và rà soát thời tiết 3 sân bay:
 
 ---
 
+## Bắt đầu nhanh
+
+Yêu cầu: Windows, Python 3.11, Java 17 (cho PySpark). Docker chỉ cần nếu dùng HDFS hoặc chạy bằng container.
+
+```bash
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m src.spark.run_pipeline --storage-root data   # dựng lại Gold từ dữ liệu mẫu, khoảng 1 phút
+run_dashboard.bat                                                        # mở http://localhost:8501
+```
+
+## Tài liệu
+
+| Cần biết | Mở |
+|---|---|
+| Toàn bộ hệ thống chạy thế nào | `docs/handoff/he-thong-hien-tai.md` |
+| Kết quả đã chạy, rủi ro, việc còn lại | `docs/handoff/handoff-nhom.md` và `docs/handoff/ket-qua/` |
+| Checklist việc của từng người | `docs/handoff/checklist-cong-viec.xlsx` |
+| Hiện trạng, đánh giá, kiến trúc đích, roadmap, ADR, từ điển dữ liệu | `docs/architecture/` |
+| Kế hoạch dự án nhóm và thang điểm | `docs/ke-hoach-nhom.md` |
+
+---
+
 ## Kiến trúc Hệ thống (End-to-End Big Data Architecture)
 
 Hệ thống bao gồm ba tầng xử lý dữ liệu phối hợp:
@@ -164,6 +187,13 @@ Chạy pipeline phân tích dữ liệu, đối soát và commit lake Silver/Gol
 ```bash
 .venv\Scripts\pytest.exe -q
 ```
+Bộ kiểm thử có 333 test, chạy khoảng 10–16 phút vì phần Spark khởi động chậm trên Windows. Test dashboard và test thu nhận chạy nhanh (dưới 1 phút); để chạy riêng: `pytest tests/dashboard tests/ingestion -q`. Test Spark đọc dữ liệu mẫu đã commit trong `data/raw_compact/`.
+
+### 11. Đóng gói Bộ Mẫu Nộp Bài
+```bash
+.venv\Scripts\python.exe scripts/package_sample.py --storage-root data --out dist/sample_dataset.zip
+```
+Gói gồm cửa sổ phát lại đã ghim, bảng Gold và nhật ký kiểm toán; không chứa dữ liệu tải bù hay khóa truy cập. `dist/` không được commit.
 
 ---
 
@@ -172,57 +202,35 @@ Chạy pipeline phân tích dữ liệu, đối soát và commit lake Silver/Gol
 DLL/
 ├── config/
 │   ├── airports.json                 # Tọa độ, mã ICAO và phân đoạn vệ tinh của 3 sân bay
-│   └── hadoop/bin/                   # winutils.exe & hadoop.dll cho PySpark trên Windows
+│   ├── replay_slots.json             # 3 mốc phát lại cố định cho demo và đo KPI
+│   └── hadoop/                       # hadoop.env cho Docker; bin/ có winutils.exe, hadoop.dll cho PySpark trên Windows
 ├── src/
-│   ├── ingestion/                    # Mô-đun 1 & 2: Thu thập và chuẩn bị dữ liệu
-│   │   ├── config_loader.py          # Đọc và xác thực cấu hình sân bay
-│   │   ├── storage.py                # Ghi tệp nguyên tử (.tmp -> .json) & ghi log audit
-│   │   ├── http_client.py            # Gọi HTTP với cơ chế retry và exponential backoff
-│   │   ├── metar_client.py           # Thu thập bản tin METAR
-│   │   ├── open_meteo_client.py      # Thu thập dự báo Open-Meteo
-│   │   ├── himawari_client.py        # Tải phân đoạn Himawari-9 S3 & quản lý vòng đời tệp thô
-│   │   ├── satpy_processor.py        # Cắt tọa độ bằng Satpy, tính chỉ số đám mây, vẽ PNG
-│   │   ├── hdfs_client.py            # Khách WebHDFS đẩy dữ liệu & đo benchmark thông lượng
-│   │   └── run_ingest.py             # Điểm điều phối CLI chính (--once, --loop, v.v.)
-│   ├── spark/                        # Mô-đun 3: Xử lý Big Data & Động cơ Ưu tiên
-│   │   ├── session.py                # Khởi tạo SparkSession tối ưu cục bộ/HDFS
-│   │   ├── schemas.py                # Schema PySpark nghiêm ngặt cho 3 nguồn dữ liệu
-│   │   ├── readers.py                # Trình đọc JSON hỗ trợ _corrupt_record
-│   │   ├── quarantine.py             # Phân tách cách ly & báo cáo đối soát bảo toàn dòng
-│   │   ├── transforms.py             # Chuẩn hóa tầm nhìn, mã thời tiết, phân loại mây B13
-│   │   ├── temporal_join.py          # Ghép dữ liệu Point-in-Time không rò rỉ tương lai
-│   │   ├── priority_engine.py        # Động cơ phân cấp Level 1–4 & giải quyết đồng mức
-│   │   └── run_pipeline.py           # Điều phối CLI pipeline PySpark và xuất bảng quyết định
-│   └── dashboard/                    # Mô-đun 4: Giao diện Streamlit & Công cụ Đánh giá KPI
-│       ├── data_loader.py            # Nạp & chuẩn hóa mốc thời gian UTC/VN, tìm chuỗi 6 ảnh B13
-│       ├── kpi_evaluator.py          # Chấm điểm tự động KPI, lưu/đọc kpi_trials_log.jsonl & tính Median
-│       └── app.py                    # Ứng dụng Streamlit 3 Tab (Rà soát, KPI, Đối soát)
-├── tests/
-│   ├── ingestion/                    # Kiểm thử đơn vị cho tầng Ingestion (43 test cases)
-│   ├── spark/                        # Kiểm thử đơn vị & tích hợp cho PySpark (18 test cases)
-│   └── dashboard/                    # Kiểm thử đơn vị & smoke test cho Dashboard (12 test cases)
-│       ├── test_data_loader.py
-│       ├── test_kpi_evaluator.py
-│       └── test_app_smoke.py
+│   ├── ingestion/                    # Thu thập METAR, Open-Meteo, Himawari-9; ghi Bronze nguyên tử; tải bù; HDFS
+│   ├── spark/                        # Pipeline PySpark: schema, quarantine, ghép đúng thời điểm, mức ưu tiên, ghi lake, runner
+│   ├── dashboard/                    # Streamlit (4 tab, chỉ đọc Gold), KPI evaluator, giải mã METAR
+│   ├── diagnostics/                  # Chẩn đoán vận hành: độ mới, độ phủ, nguyên nhân thiếu, bất thường, trôi dữ liệu
+│   ├── analytics/                    # Kiểm định dự báo mưa và thứ tự Mức 1–4
+│   └── ml/                           # Nhãn, đặc trưng, huấn luyện, suy luận dự đoán 0–60′ (chỉ để tham khảo)
+├── tests/                            # 333 test, chia theo mô-đun như src/
+├── scripts/
+│   └── package_sample.py             # Đóng gói bộ mẫu nộp bài
 ├── data/
-│   ├── raw/                          # Lớp dữ liệu thô (Hive partition YYYY-MM-DD)
-│   │   ├── metar/date=YYYY-MM-DD/
-│   │   ├── open_meteo/date=YYYY-MM-DD/
-│   │   ├── himawari_hsd/date=YYYY-MM-DD/slot=HHMM/
-│   │   └── himawari_metrics/date=YYYY-MM-DD/
-│   ├── processed/
-│   │   ├── himawari_png/airport=ICAO/date=YYYY-MM-DD/
-│   │   ├── decision_table/           # decision_table.jsonl (3 dòng/lượt rà soát)
-│   │   ├── quarantine/               # quarantine_records.jsonl
-│   │   └── reconciliation/           # reconciliation_summary.json (bảo toàn dòng)
-│   └── logs/                         # Nhật ký kiểm toán & chỉ số 5V
-│       ├── ingestion_log.jsonl       # Bảng đối soát số lượt quét, số bản ghi, byte thực tải
-│       ├── himawari_file_errors.jsonl# Nhật ký cô lập tệp nhị phân vệ tinh bị hỏng
-│       ├── hdfs_sync_log.jsonl       # Nhật ký đo kiểm thông lượng WebHDFS (MB/s)
-│       └── kpi_trials_log.jsonl      # Nhật ký đo kiểm thời gian & độ chính xác KPI (CLO4)
-├── docker-compose.yml                # Docker Compose bao gồm Ingestor, NameNode, DataNode, Spark, Dashboard
-├── Dockerfile                        # Đóng gói container chạy ngầm
-├── requirements.txt                  # Thư viện phụ thuộc (PySpark, Satpy, Streamlit, v.v.)
-├── run_daemon.bat                    # Kịch bản khởi chạy 1 chạm có Himawari-9 trên Windows
-└── run_dashboard.bat                 # Kịch bản khởi chạy 1 chạm Dashboard Streamlit trên Windows
+│   ├── raw_compact/                  # Bronze: JSONL theo nguồn và ngày (date=YYYY-MM-DD)
+│   ├── lake/                         # Silver (quarantine) và Gold (decision_table, reconciliation, health, ...) dạng Parquet có phiên bản
+│   ├── processed/                    # Ảnh PNG B13 và bảng quyết định JSONL dự phòng ngoại tuyến
+│   └── logs/                         # Nhật ký thu nhận, lỗi tệp, HDFS, pipeline, sức khỏe, KPI
+├── models/                           # Mô hình dự đoán đã huấn luyện (LATEST trỏ tới bản mới nhất)
+├── docs/
+│   ├── ke-hoach-nhom.md              # Kế hoạch dự án nhóm và thang điểm
+│   ├── architecture/                 # Hiện trạng, đánh giá, kiến trúc đích, roadmap, từ điển dữ liệu, ADR
+│   ├── handoff/                      # Tài liệu bàn giao, checklist Excel, bảng kết quả
+│   └── superpowers/plans/            # Kế hoạch triển khai từng mô-đun
+├── docker-compose.yml                # Ingestor, dashboard, NameNode, DataNode, Spark (profile `spark`)
+├── Dockerfile                        # Image chạy ngầm
+├── requirements.txt                  # Thư viện phụ thuộc
+├── pytest.ini
+├── run_daemon.bat                    # Khởi chạy 1 chạm thu thập dữ liệu (có Himawari-9) trên Windows
+└── run_dashboard.bat                 # Khởi chạy 1 chạm Dashboard trên Windows
 ```
+
+Không được commit: `.venv/`, `dist/`, `.harness/`, tệp thô vệ tinh `.DAT.bz2` (trừ một tệp mẫu tổng hợp), các bảng Silver nguồn (dựng lại bằng pipeline), tệp checksum `*.crc`, khóa truy cập.
