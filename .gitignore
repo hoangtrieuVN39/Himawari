@@ -32,7 +32,7 @@ data/raw/himawari_hsd/**/*.DAT.bz2
 
 # --- Runtime state, locks and staging of the raw store ---------------------
 data/.storage-locks/
-data/storage_state.json
+# data/storage_state.json is the layout marker (daily_jsonl): readers need it, so it stays tracked
 data/backups/
 data/**/.staging/
 data/raw_compact.staging/
