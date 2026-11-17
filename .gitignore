@@ -1,18 +1,36 @@
+# --- Python / tooling -------------------------------------------------------
 .venv/
 __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+*.egg-info/
+
+# --- OS / editor ------------------------------------------------------------
 .DS_Store
 Thumbs.db
 *.tmp
+.idea/
+.vscode/
 
-# Himawari raw binary segment archives (prevent repository bloat)
+# --- Local-only working folders --------------------------------------------
+# Measurement scripts/logs of the architecture review (.harness), plus scratch data
+.harness/
+.superpowers/
+dummy_data/
+# Packaged submission sample (scripts/package_sample.py)
+dist/
+
+# --- Secrets ----------------------------------------------------------------
+.env
+*.pem
+*.key
+
+# --- Himawari raw binary segments (repo bloat); keep the one synthetic test file
 data/raw/himawari_hsd/**/*.DAT.bz2
 !data/raw/himawari_hsd/synthetic_test/*.DAT.bz2
-.superpowers/
 
-# Compact raw storage runtime files & locks
+# --- Runtime state, locks and staging of the raw store ---------------------
 data/.storage-locks/
 data/storage_state.json
 data/backups/
@@ -21,10 +39,12 @@ data/raw_compact.staging/
 data/raw_compact.replaced-*/
 data/.sync-snapshot/
 
-# Local harness records and dummy data
-.harness/
-dummy_data/
-
-# Packaged submission sample (scripts/package_sample.py) and runtime runner heartbeat
-dist/
+# --- Generated lake files that are rebuilt by `python -m src.spark.run_pipeline`
+# Hadoop checksum sidecars carry no information.
+*.crc
+# Silver source tables are rebuilt from Bronze (data/raw_compact); Gold and
+# silver/quarantine stay tracked because the dashboard and its tests read them.
+data/lake/silver/metar_observations/
+data/lake/silver/open_meteo_forecasts/
+data/lake/silver/himawari_b13_metrics/
 data/lake/_runner_heartbeat.json
